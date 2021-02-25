@@ -1,0 +1,97 @@
+Feburary 25, 2021
+
+Notes for self-reference, prototypes, wireframes, ideas for features, etc. Subject to change.
+
+Title: Exam Practice
+Language: Python or JavaScript (likely to use Python with Tkinter)
+Project Type: Personal
+Description: Program to practice multiple choice examinations. Question bank fed through an input file or manually added, tags and groups are applied, then scrambled and presented to the user when testing commences. Returns output based on whether the question was correct or not and also returns an overall exam score.
+
+Files/Modules:
+run.py			Begins execution, calls startup.py
+modules/startup.py 	Checks installed python version
+			If incompatible version of Python is detected, exits program
+			Otherwise if version is compatible, calls gui.py
+
+modules/gui.py		Module to setup main Tkinter GUI
+
+modules/msgBank.py	Module that holds all error messages used in the program
+			Returns a specific message when passed a message ID number
+
+Basic Flow:
+--> run.py is launched by user
+--> sys module is imported, modules folder appended to sys path
+----> Allows compiler to find all subsequent modules needed
+--> startup.py is loaded, checks for correct version of Python
+----> Python 3.x needed
+----> Unsure of minimum at this time; possibly 3.6 or greater based on a previous project
+----> If incompatible version detected, a message is returned, program exits
+--> gui.py is loaded from modules folder
+--> GUI constructed using Tkinter, starts mainloop
+--> Program executes various functions based on user input
+--> Exits when GUI is closed
+
+GUI and Functionality Ideas:
+--> Main window to hold all content
+--> Buttons to construct a sub-GUI based on function
+----> Begin exam
+------> Begins examination using questions supplied in question bank
+------> Disabled if no questions are set
+------> Copies question bank into an array, then randomizes array
+------> For each item in the array (sub-array containing questions and their attributes), randomize contents and pass array values into a template
+----> Manage Question Bank
+------> Opens a new window to add/remove/modify questions
+------> Questions can be input manually or loaded from a file
+------> All added questions can be output to a file, to be loaded again later
+------> Questions could be given specific attributes
+--------> Point value of question
+--------> Time limit for question, if time is enabled
+--------> Type of question (multiple choice using radio buttons or checkboxes)
+--------> Tag or group name to apply scoring in different set fields
+----------> EXAMPLE: Exam is over programming knowledge. Question could be used to access overall knowledge of programming in general and also a specific language
+----> Options
+------> Opens a window to change behaviors of exam
+--------> Shuffle questions
+--------> Shuffle choices
+--------> Enable/disable exam time limit
+--------> Enable/disable question time limit
+--------> Display/hide exam time elapsed
+--------> Enable/disable going to previous questions
+--------> Modes
+----------> None
+----------> Sudden Death Mode (end exam on incorrect answer; previous questions cannot be accessed)
+----------> Study Mode (display correct answer upon selection or time limit; enables/disables "check answer" button)
+--------> Show/hide correct answers upon completion (will only show correct/incorrect)
+----> Exit
+------> Destroys GUI, exits program
+
+Question Format Ideas:
+--> Store in a multi-dimensional array/list
+--> [1...] (shuffle at exam start if question shuffle is enabled)
+----> 1 = Array: [A, B, C, D, E, F, G] (question attributes)
+----> A = String: The question
+----> B = Float: Question point value
+----> C = Integer: Time limit in seconds
+----> D = Integer: Question type (multiple choice or multiple answer)
+------> For multiple selection, think of an algorithm for dividing the point value based on the number of correct selections vs incorrect selections (to be added later)
+----> E = Integer: Correct answer value
+----> F = Array: [i...] (question choices i, ii, iii, iv...; shuffle at exam start if choice shuffle is enabled)
+------> i... = Array: [a, b]
+--------> a = String: The choice
+--------> b = Integer: The choice value (compare with E to determine if answer is correct or not)
+----------> b is necessary due to the choice shuffling option
+----> G = Array: [i...] (tags)
+------> i... = String: Tag name
+--> Count array length of F to determine how many radio buttons or checkboxes to display
+
+Input File Template:
+QUESTION: <question>
+VALUE: <question point value>
+TIME: <seconds or none>
+ANSWER-LIMIT: <ONE or MULTI>
+CORRECT-ANSWER: <choice index> (should not be greater than the total number of choices provided)
+CHOICE:<choice index>:<choice>
+CHOICE... (continue as needed, increase choice index by 1 for each choice)
+TAGS:<tag 1 or none>;<tag 2>;<tag 3>... (tags 2 and beyond are optional)
+
+Seperate elements with new lines
