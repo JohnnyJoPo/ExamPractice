@@ -1,4 +1,4 @@
-Feburary 25, 2021
+Feburary 26, 2021
 
 Notes for self-reference, prototypes, wireframes, ideas for features, etc. Subject to change.
 
@@ -66,7 +66,7 @@ GUI and Functionality Ideas:
 ------> Destroys GUI, exits program
 
 Question Format Ideas:
---> Store in a multi-dimensional array/list
+--> Store in a multi-dimensional array/list (name questionBank)
 --> [1...] (shuffle at exam start if question shuffle is enabled)
 ----> 1 = Array: [A, B, C, D, E, F, G] (question attributes)
 ----> A = String: The question
@@ -74,11 +74,11 @@ Question Format Ideas:
 ----> C = Integer: Time limit in seconds
 ----> D = Integer: Question type (multiple choice or multiple answer)
 ------> For multiple selection, think of an algorithm for dividing the point value based on the number of correct selections vs incorrect selections (to be added later)
-----> E = Integer: Correct answer value
+----> E = Integer: Correct choice index
 ----> F = Array: [i...] (question choices i, ii, iii, iv...; shuffle at exam start if choice shuffle is enabled)
 ------> i... = Array: [a, b]
 --------> a = String: The choice
---------> b = Integer: The choice value (compare with E to determine if answer is correct or not)
+--------> b = Integer: The choice index(compare with E to determine if answer is correct or not)
 ----------> b is necessary due to the choice shuffling option
 ----> G = Array: [i...] (tags)
 ------> i... = String: Tag name
@@ -95,3 +95,24 @@ CHOICE... (continue as needed, increase choice index by 1 for each choice)
 TAGS:<tag 1 or none>;<tag 2>;<tag 3>... (tags 2 and beyond are optional)
 
 Seperate elements with new lines
+
+Question Bank Window:
+--> Updates class variable questionBank (array)
+--> Form elements needed for each question:
+----> Question, point value, time limit, type, correct answer index, choices, tags
+--> Combobox to hold all added questions, selecting a question populates all form elements with data for that question
+----> Changing any element updates the question
+----> Last index in combobox used to add new question. As soon as data is entered, a new empty question is added to the combobox
+----> Last index to be ignored by exam function
+--> Button to clear currently selected question from combobox
+--> Button to clear all questions
+--> Textbox to hold question
+--> Entry to hold point value and time limit
+--> Radio buttons to select type
+--> Entry for each choice
+--> Radio buttons or checkboxes next to each choice to mark correct choice
+--> Entry to enter a new tag name
+--> Listbox to display all added tags
+--> Button to add tag from entry to listbox
+--> Button to remove selected tag from listbox
+--> Button to remove all tags from listbox
