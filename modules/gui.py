@@ -31,16 +31,36 @@ class interface:
         tkinter.mainloop()
 
     def openQuestionManager(self):
-        def updateDisplayList():
-            _ = 0
+        def updateDisplayList(event=None):
+            question = question_txt.get("1.0","end-1c")
+            selectedIndex = questionBank_comBx.current()
+            if len(displayList) - 1 == selectedIndex:
+                if question.strip() != "":
+                    displayList.insert(selectedIndex, question.strip())
+                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, 0, [], []])
+            else:
+                if question.strip() == "":
+                    displayList.pop(selectedIndex)
+                    self.questionBank.pop(selectedIndex)
+                else:
+                    displayList[selectedIndex] = question.strip()
+                    self.questionBank[selectedIndex][0] = question.strip()
 
-        def updateForm():
-            index = questionBank_comBx.current()
-#            self.questionBank[index]
+            questionBank_comBx.config(values=displayList)
+            if question.strip() == "":
+                questionBank_comBx.current(len(displayList) - 1)
+            else:
+                questionBank_comBx.current(selectedIndex)
+
+        def updateForm(event=None):
+            selectedIndex = questionBank_comBx.current()
+            question_txt.delete("1.0",tkinter.END)
+            if len(displayList) - 1 > selectedIndex:
+                question_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
 
         def enableChoices():
             _ = 0
-
+            
         def removeChoice():
             _ = 0
         
@@ -52,7 +72,7 @@ class interface:
 
         def load():
             _ = 0
-        
+   
         def save():
             _ = 0
 
@@ -74,7 +94,7 @@ class interface:
         window_tL.resizable(width=False, height=False)
         menu_frm = tkinter.Frame(window_tL)
         questionBank_lbl = tkinter.Label(menu_frm, text="Selected question:", anchor="w")
-        questionBank_comBx = tkinter.ttk.Combobox(menu_frm, width=60, height=10, values=displayList)
+        questionBank_comBx = tkinter.ttk.Combobox(menu_frm, width=60, height=10)
         header_frm = tkinter.Frame(window_tL)
         clear_btn = tkinter.Button(header_frm, width=20, text="Clear Selected Question", command=clear, state="disabled")
         clearAll_btn = tkinter.Button(header_frm, width=16, text="Clear All Questions", command=clearAll, state="disabled")
@@ -107,15 +127,18 @@ class interface:
         choice3_frm = tkinter.Frame(answers_frm)
         choice3_rad = tkinter.Radiobutton(choice3_frm, variable=self.choiceIndex_tkIVar, value=2, state="disabled")
         choice3_chk = tkinter.Checkbutton(choice3_frm, variable=multiIndex3_tkBVar, state="disabled")
-        choice3_txt = tkinter.Text(choice3_frm, width=52, height=2)
+        choice3_txt = tkinter.Text(choice3_frm, width=52, height=2, state="disabled", bg="#dfdfdf")
         choice4_frm = tkinter.Frame(answers_frm)
         choice4_rad = tkinter.Radiobutton(choice4_frm, variable=self.choiceIndex_tkIVar, value=3, state="disabled")
         choice4_chk = tkinter.Checkbutton(choice4_frm, variable=multiIndex4_tkBVar, state="disabled")
-        choice4_txt = tkinter.Text(choice4_frm, width=52, height=2)
+        choice4_txt = tkinter.Text(choice4_frm, width=52, height=2, state="disabled", bg="#dfdfdf")
         choice5_frm = tkinter.Frame(answers_frm)
         choice5_rad = tkinter.Radiobutton(choice5_frm, variable=self.choiceIndex_tkIVar, value=4, state="disabled")
         choice5_chk = tkinter.Checkbutton(choice5_frm, variable=multiIndex5_tkBVar, state="disabled")
-        choice5_txt = tkinter.Text(choice5_frm, width=52, height=2)
+        choice5_txt = tkinter.Text(choice5_frm, width=52, height=2, state="disabled", bg="#dfdfdf")
+
+        question_txt.bind("<KeyRelease>", updateDisplayList)
+        questionBank_comBx.bind("<<ComboboxSelected>>", updateForm)
 
         menu_frm.place(x=5, y=5)
         questionBank_lbl.pack(side="left")
@@ -161,7 +184,16 @@ class interface:
         choice5_chk.pack(side="left")
         choice5_txt.pack(fill="x", padx=(0,5), expand="true")
 
-        updateDisplayList()
+        if len(self.questionBank) != 0:
+            displayList.clear()
+            for inArray in self.questionBank:
+                displayList.append(inArray[0])
+            displayList.append("<add new question>")
+
+        print(self.questionBank)
+        print(displayList)
+        
+        questionBank_comBx.config(values=displayList)
         questionBank_comBx.current(0)
         updateForm()
         window_tL.focus_set()
