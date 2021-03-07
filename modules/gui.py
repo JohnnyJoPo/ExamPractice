@@ -59,7 +59,75 @@ class interface:
                 question_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
 
         def enableChoices():
-            _ = 0
+            if self.choiceAmount_tkIVar.get() > 2:
+                choice3_txt.config(state="normal", bg="#ffffff")
+                if self.choiceAmount_tkIVar.get() > 3:
+                    choice4_txt.config(state="normal", bg="#ffffff")
+                    if self.choiceAmount_tkIVar.get() > 4:
+                        choice5_txt.config(state="normal", bg="#ffffff")
+                    else:
+                        choice5_txt.config(state="disabled", bg="#dfdfdf")
+                else:
+                    choice4_txt.config(state="disabled", bg="#dfdfdf")
+                    choice5_txt.config(state="disabled", bg="#dfdfdf")
+            else:
+                choice3_txt.config(state="disabled", bg="#dfdfdf")
+                choice4_txt.config(state="disabled", bg="#dfdfdf")
+                choice5_txt.config(state="disabled", bg="#dfdfdf")
+
+            if self.questionType_tkIVar.get() == 0:
+                choice1_rad.config(state="normal")
+                choice2_rad.config(state="normal")
+                choice1_rad.select()
+                if self.choiceAmount_tkIVar.get() > 2:
+                    choice3_rad.config(state="normal")
+                    if self.choiceAmount_tkIVar.get() > 3:
+                        choice4_rad.config(state="normal")
+                        if self.choiceAmount_tkIVar.get() > 4:
+                            choice5_rad.config(state="normal")
+                        else:
+                            choice5_rad.config(state="disabled")
+                    else:
+                        choice4_rad.config(state="disabled")
+                        choice5_rad.config(state="disabled")
+                else:
+                    choice3_rad.config(state="disabled")
+                    choice4_rad.config(state="disabled")
+                    choice5_rad.config(state="disabled")
+                choice1_chk.deselect()
+                choice2_chk.deselect()
+                choice3_chk.deselect()
+                choice4_chk.deselect()
+                choice5_chk.deselect()
+                choice1_chk.config(state="disabled")
+                choice2_chk.config(state="disabled")
+                choice3_chk.config(state="disabled")
+                choice4_chk.config(state="disabled")
+                choice5_chk.config(state="disabled")
+            else:
+                choice1_rad.select()
+                choice1_rad.config(state="disabled")
+                choice2_rad.config(state="disabled")
+                choice3_rad.config(state="disabled")
+                choice4_rad.config(state="disabled")
+                choice5_rad.config(state="disabled")
+                choice1_chk.config(state="normal")
+                choice2_chk.config(state="normal")
+                if self.choiceAmount_tkIVar.get() > 2:
+                    choice3_chk.config(state="normal")
+                    if self.choiceAmount_tkIVar.get() > 3:
+                        choice4_chk.config(state="normal")
+                        if self.choiceAmount_tkIVar.get() > 4:
+                            choice5_chk.config(state="normal")
+                        else:
+                            choice5_chk.config(state="disabled")
+                    else:
+                        choice4_chk.config(state="disabled")
+                        choice5_chk.config(state="disabled")
+                else:
+                    choice3_chk.config(state="disabled")
+                    choice4_chk.config(state="disabled")
+                    choice5_chk.config(state="disabled")
             
         def removeChoice():
             _ = 0
@@ -108,13 +176,13 @@ class interface:
         topOptions_frm = tkinter.Frame(options_frm)
         points_lbl = tkinter.Label(topOptions_frm, text="Point Value:", anchor="w")
         points_ent = tkinter.Entry(topOptions_frm, width=8, textvariable=points_tkSVar)
-        typeSingle_rad = tkinter.Radiobutton(topOptions_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0)
+        typeSingle_rad = tkinter.Radiobutton(topOptions_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0, command=enableChoices)
         choiceAmount_lbl = tkinter.Label(topOptions_frm, text="Choices:", anchor="w")
         choiceAmount_spnBx = tkinter.ttk.Spinbox(topOptions_frm, from_=2, to=5, command=enableChoices, textvariable=self.choiceAmount_tkIVar, state="readonly", width=4)
         bottomOptions_frm = tkinter.Frame(options_frm)
         time_lbl = tkinter.Label(bottomOptions_frm, text="Time Limit (in seconds):", anchor="w")
         time_ent = tkinter.Entry(bottomOptions_frm, width=8, textvariable=time_tkSVar)
-        typeMulti_rad = tkinter.Radiobutton(bottomOptions_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1)
+        typeMulti_rad = tkinter.Radiobutton(bottomOptions_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1, command=enableChoices)
         answers_frm = tkinter.LabelFrame(window_tL, text="Answers", relief="groove", bd=2)
         choice1_frm = tkinter.Frame(answers_frm)
         choice1_rad = tkinter.Radiobutton(choice1_frm, variable=self.choiceIndex_tkIVar, value=0)
