@@ -17,7 +17,7 @@ class interface:
         self.window_tk.geometry("300x140")
         self.window_tk.resizable(width=False, height=False)
 
-        self.manage_btn = tkinter.Button(self.window_tk, width=18, height=2, text="Manage\nQuestion Bank", command=self.openQuestionManager)
+        self.manage_btn = tkinter.Button(self.window_tk, width=18, height=2, text="Manage Questions", command=self.openQuestionManager)
         self.options_btn = tkinter.Button(self.window_tk, width=18, height=2, text="Exam Options", command=self.openOptionWindow)
         self.start_btn = tkinter.Button(self.window_tk, width=38, height=2, text="Begin Exam", state="disabled", command=self.startExam)
         self.exit_btn = tkinter.Button(self.window_tk, width=38, height=1, text="Exit", command=self.exitProgram)
@@ -37,20 +37,31 @@ class interface:
             if len(displayList) - 1 == selectedIndex:
                 if question.strip() != "":
                     displayList.insert(selectedIndex, question.strip())
-                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [], [], [], False])
+                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [0], [["", 0], ["", 1]], [], False])
             else:
                 if question.strip() == "":
                     displayList.pop(selectedIndex)
                     self.questionBank.pop(selectedIndex)
+                    points_tkSVar.set("1.0")
+                    time_tkSVar.set("0")
+                    self.choiceAmount_tkIVar.set(2)
+                    self.questionType_tkIVar.set(0)
+                    self.choiceIndex_tkIVar.set(0)
+                    error_lbl.config(text="\n")
+                    tag_tkSVar.set("")
+                    for i in range(0,5):
+                        multiIndexArray[i].set(0)
+                        choiceArray[i][2].delete("1.0",tkinter.END)
                 else:
                     displayList[selectedIndex] = question.strip()
                     self.questionBank[selectedIndex][0] = question.strip()
 
             questionBank_comBx.config(values=displayList)
             if question.strip() == "":
-                questionBank_comBx.current(len(displayList) - 1)
+                questionBank_comBx.current(len(displayList) - 1)       
             else:
                 questionBank_comBx.current(selectedIndex)
+            enableChoices()
 
         def insertData(event=None):
             selectedIndex = questionBank_comBx.current()
@@ -81,27 +92,108 @@ class interface:
             question_txt.delete("1.0",tkinter.END)
             if len(displayList) - 1 > selectedIndex:
                 question_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
+                points_tkSVar.set(str(self.questionBank[selectedIndex][1]))
+                time_tkSVar.set(str(self.questionBank[selectedIndex][2]))
+                self.choiceAmount_tkIVar.set(len(self.questionBank[selectedIndex][5]))
+                self.questionType_tkIVar.set(self.questionBank[selectedIndex][3])
+                if self.questionBank[selectedIndex][3] == 0:
+                    self.choiceIndex_tkIVar.set(self.questionBank[selectedIndex][4][0])
+                else:
+                    for i in range(0,5):
+                        multiIndexArray[i].set(0)
+                        if i in self.questionBank[selectedIndex][4]:
+                            multiIndexArray[i].set(1)
+                for i in range(0,5):
+                    choiceArray[i][2].delete("1.0",tkinter.END)
+                    if i < len(self.questionBank[selectedIndex][5]):
+                        choiceArray[i][2].config(state="normal")
+                        choiceArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][0])
+                tag_tkSVar.set("")
+                checkValidity()
+            else:
+                points_tkSVar.set("1.0")
+                time_tkSVar.set("0")
+                self.choiceAmount_tkIVar.set(2)
+                self.questionType_tkIVar.set(0)
+                self.choiceIndex_tkIVar.set(0)
+                error_lbl.config(text="\n")
+                tag_tkSVar.set("")
+                for i in range(0,5):
+                    multiIndexArray[i].set(0)
+                    choiceArray[i][2].delete("1.0",tkinter.END)
+            enableChoices()
 
         def checkValidity():
-            _ = 0
+            valid = True
+            selectedIndex = questionBank_comBx.current()
+            try:
+                if float(self.questionBank[selectedIndex][1]) < 0:
+                    raise ValueError
+                else:
+                    self.questionBank[selectedIndex][1] = float(self.questionBank[selectedIndex][1])
+                if isinstance(self.questionBank[selectedIndex][2], float) or int(self.questionBank[selectedIndex][2]) < 0:
+                    raise ValueError
+                else:
+                    self.questionBank[selectedIndex][2] = int(self.questionBank[selectedIndex][2])
+                if not self.questionBank[selectedIndex][4]:
+                    raise ValueError
+                for inArray in self.questionBank[selectedIndex][5]:
+                    if inArray[0].strip() == "":
+                        raise ValueError
+            except ValueError:
+                valid = False
+            if valid:
+                error_lbl.config(text="\n")
+                self.questionBank[selectedIndex][7] = True
+            else:
+                error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
+                    "Please check that all fields are filled out with proper values.")
+                self.questionBank[selectedIndex][7] = False
 
         def enableChoices():
-            for i in range(0,5):
-                if self.choiceAmount_tkIVar.get() > i:
-                    choiceArray[i][2].config(state="normal", bg="#ffffff")
-                    if self.questionType_tkIVar.get() == 0:
-                        choiceArray[i][0].config(state="normal")
-                        choiceArray[i][1].config(state="disabled")
-                        choiceArray[i][1].deselect()
-                    else:
-                        choiceArray[i][0].config(state="disabled")
-                        choiceArray[i][1].config(state="normal")
-                else:
+            selectedIndex = questionBank_comBx.current()
+            if selectedIndex == len(displayList) - 1:
+                points_ent.config(state="disabled")
+                points_ent.unbind("<KeyRelease>")
+                time_ent.config(state="disabled")
+                time_ent.unbind("<KeyRelease>")
+                typeSingle_rad.config(state="disabled")
+                typeMulti_rad.config(state="disabled")
+                choiceAmount_spnBx.config(state="disabled")
+                for i in range(0,5):
                     choiceArray[i][0].config(state="disabled")
                     choiceArray[i][1].config(state="disabled")
+                    choiceArray[i][2].delete("1.0",tkinter.END)
                     choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
+                    choiceArray[i][2].unbind("<KeyRelease>")
+            else:
+                points_ent.config(state="normal")
+                points_ent.bind("<KeyRelease>", insertData)
+                time_ent.config(state="normal")
+                time_ent.bind("<KeyRelease>", insertData)
+                typeSingle_rad.config(state="normal")
+                typeMulti_rad.config(state="normal")
+                choiceAmount_spnBx.config(state="readonly")
+                for i in range(0,5):
+                    if self.choiceAmount_tkIVar.get() > i:
+                        choiceArray[i][2].config(state="normal", bg="#ffffff")
+                        choiceArray[i][2].bind("<KeyRelease>", insertData)
+                        if self.questionType_tkIVar.get() == 0:
+                            choiceArray[i][0].config(state="normal")
+                            choiceArray[i][1].config(state="disabled")
+                            choiceArray[i][1].deselect()
+                        else:
+                            choiceArray[i][0].config(state="disabled")
+                            choiceArray[i][1].config(state="normal")
+                    else:
+                        choiceArray[i][0].config(state="disabled")
+                        choiceArray[i][1].config(state="disabled")
+                        choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
+                        choiceArray[i][2].unbind("<KeyRelease>")
+                insertData()
+                
 
-        def removeChoice():
+        def removeTag():
             _ = 0
         
         def addTag():
@@ -109,9 +201,11 @@ class interface:
 
         def clear():
             _ = 0
+            # updateForm()
 
         def clearAll():
             _ = 0
+            # updateForm()
 
         def load():
             #_ = 0
@@ -158,8 +252,7 @@ class interface:
         questionBankButtons_frm.columnconfigure(2, weight=1)
         questionBankButtons_frm.columnconfigure(3, weight=1)
 
-        error_lbl = tkinter.Label(window_tL, text="This question is not configured properly and will not appear in the exam.\n" \
-            "Please check that all fields are filled out with proper values.", fg="red")
+        error_lbl = tkinter.Label(window_tL, text="", fg="red")
         error_lbl.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,0))
 
         question_frm = tkinter.LabelFrame(window_tL, text="Question")
@@ -176,15 +269,13 @@ class interface:
 
         options_frm = tkinter.LabelFrame(window_tL, text="Options")
         points_lbl = tkinter.Label(options_frm, text="Question Point Value:", anchor="w")
-        points_ent = tkinter.Entry(options_frm, width=10, textvariable=points_tkSVar)
+        points_ent = tkinter.Entry(options_frm, width=10, textvariable=points_tkSVar, state="disabled")
         time_lbl = tkinter.Label(options_frm, text="Time Limit (in seconds):", anchor="w")
-        time_ent = tkinter.Entry(options_frm, width=10, textvariable=time_tkSVar)
-        typeSingle_rad = tkinter.Radiobutton(options_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0, command=enableChoices)
-        typeMulti_rad = tkinter.Radiobutton(options_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1, command=enableChoices)
+        time_ent = tkinter.Entry(options_frm, width=10, textvariable=time_tkSVar, state="disabled")
+        typeSingle_rad = tkinter.Radiobutton(options_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0, command=enableChoices, state="disabled")
+        typeMulti_rad = tkinter.Radiobutton(options_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1, command=enableChoices, state="disabled")
         choiceAmount_lbl = tkinter.Label(options_frm, text="Choices:", anchor="w")
-        choiceAmount_spnBx = tkinter.ttk.Spinbox(options_frm, width=5, from_=2, to=5, command=enableChoices, textvariable=self.choiceAmount_tkIVar, state="readonly")
-        points_ent.bind("<KeyRelease>", insertData)
-        time_ent.bind("<KeyRelease>", insertData)
+        choiceAmount_spnBx = tkinter.ttk.Spinbox(options_frm, width=5, from_=2, to=5, command=enableChoices, textvariable=self.choiceAmount_tkIVar, state="disabled")
         options_frm.grid(row=3, column=0, sticky="ew", padx=5)
         points_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=(5,0))
         points_ent.grid(row=0, column=1, sticky="w", pady=(5,0))
@@ -213,8 +304,7 @@ class interface:
             multiIndexArray.append(tkinter.BooleanVar(value=False))
             choiceArray[i].append(tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=i, command=insertData, state="disabled"))
             choiceArray[i].append(tkinter.Checkbutton(answers_frm, variable=multiIndexArray[i], command=insertData, state="disabled"))
-            choiceArray[i].append(tkinter.Text(answers_frm, height=2))
-            choiceArray[i][2].bind("<KeyRelease>", insertData)
+            choiceArray[i].append(tkinter.Text(answers_frm, height=2, state="disabled", bg="#dfdfdf"))
             choiceArray[i][0].grid(row=i, column=0, padx=5)
             choiceArray[i][1].grid(row=i, column=1, padx=5)
             choiceArray[i][2].grid(row=i, column=2, sticky="ew", padx=(0,5), pady=(0,5))
