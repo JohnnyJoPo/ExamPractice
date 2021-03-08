@@ -68,13 +68,13 @@ GUI and Functionality Ideas:
 Question Format Ideas:
 --> Store in a multi-dimensional array/list (name questionBank)
 --> [1...] (shuffle at exam start if question shuffle is enabled)
-----> 1 = Array: [A, B, C, D, E, F, G] (question attributes)
+----> 1 = Array: [A, B, C, D, E, F, G, H] (question attributes)
 ----> A = String: The question
 ----> B = Float: Question point value
 ----> C = Integer: Time limit in seconds
 ----> D = Integer: Question type (multiple choice or multiple answer)
 ------> For multiple selection, think of an algorithm for dividing the point value based on the number of correct selections vs incorrect selections (to be added later)
-----> E = Integer: Correct choice index
+----> E = [Integer Array]: Correct choice index(es)
 ----> F = Array: [i...] (question choices i, ii, iii, iv...; shuffle at exam start if choice shuffle is enabled)
 ------> i... = Array: [a, b]
 --------> a = String: The choice
@@ -82,6 +82,8 @@ Question Format Ideas:
 ----------> b is necessary due to the choice shuffling option
 ----> G = Array: [i...] (tags)
 ------> i... = String: Tag name
+----> H = Boolean: Question validity (this will get set to true if all other values in the array are valid)
+------> Check this value when exam starts and remove any questions where this is false (before shuffling, etc)
 --> Count array length of F to determine how many radio buttons or checkboxes to display
 
 Input File Template:

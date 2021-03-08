@@ -37,7 +37,7 @@ class interface:
             if len(displayList) - 1 == selectedIndex:
                 if question.strip() != "":
                     displayList.insert(selectedIndex, question.strip())
-                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, 0, [], []])
+                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [], [], [], False])
             else:
                 if question.strip() == "":
                     displayList.pop(selectedIndex)
@@ -52,11 +52,44 @@ class interface:
             else:
                 questionBank_comBx.current(selectedIndex)
 
+        def insertData(event=None):
+            selectedIndex = questionBank_comBx.current()
+            self.questionBank[selectedIndex][1] = points_tkSVar.get()
+            self.questionBank[selectedIndex][2] = time_tkSVar.get()
+            self.questionBank[selectedIndex][3] = self.questionType_tkIVar.get()
+            self.questionBank[selectedIndex][4].clear()
+            if (self.choiceIndex_tkIVar.get() == 0 and self.questionType_tkIVar.get() == 0) or multiIndex1_tkBVar.get() == True:
+                self.questionBank[selectedIndex][4].append(0)
+            if self.choiceIndex_tkIVar.get() == 1 or multiIndex2_tkBVar.get() == True:
+                self.questionBank[selectedIndex][4].append(1)
+            if self.choiceIndex_tkIVar.get() == 2 or multiIndex3_tkBVar.get() == True:
+                self.questionBank[selectedIndex][4].append(2)
+            if self.choiceIndex_tkIVar.get() == 3 or multiIndex4_tkBVar.get() == True:
+                self.questionBank[selectedIndex][4].append(3)
+            if self.choiceIndex_tkIVar.get() == 4 or multiIndex5_tkBVar.get() == True:
+                self.questionBank[selectedIndex][4].append(4)
+            self.questionBank[selectedIndex][5].clear()
+            self.questionBank[selectedIndex][5].append([choice1_txt.get("1.0","end-1c").strip(), 0])
+            self.questionBank[selectedIndex][5].append([choice2_txt.get("1.0","end-1c").strip(), 1])
+            if self.choiceAmount_tkIVar.get() > 2:
+                self.questionBank[selectedIndex][5].append([choice3_txt.get("1.0","end-1c").strip(), 2])
+                if self.choiceAmount_tkIVar.get() > 3:
+                    self.questionBank[selectedIndex][5].append([choice4_txt.get("1.0","end-1c").strip(), 3])
+                    if self.choiceAmount_tkIVar.get() > 4:
+                        self.questionBank[selectedIndex][5].append([choice5_txt.get("1.0","end-1c").strip(), 4])
+            self.questionBank[selectedIndex][6].clear()
+            for item in tagList:
+                self.questionBank[selectedIndex][6].append(item)
+            checkValidity()
+
         def updateForm(event=None):
             selectedIndex = questionBank_comBx.current()
             question_txt.delete("1.0",tkinter.END)
             if len(displayList) - 1 > selectedIndex:
                 question_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
+
+        def checkValidity():
+            _ = 0
 
         def enableChoices():
             if self.choiceAmount_tkIVar.get() > 2:
@@ -132,6 +165,9 @@ class interface:
         def removeChoice():
             _ = 0
         
+        def addTag():
+            _ = 0
+
         def clear():
             _ = 0
 
@@ -139,12 +175,14 @@ class interface:
             _ = 0
 
         def load():
-            _ = 0
+            #_ = 0
+            print(self.questionBank)
    
         def save():
             _ = 0
 
         displayList = ["<add new question>"]
+        tagList = []
         points_tkSVar = tkinter.StringVar()
         time_tkSVar = tkinter.StringVar()
         self.choiceAmount_tkIVar = tkinter.IntVar(value=2)
@@ -155,102 +193,152 @@ class interface:
         multiIndex3_tkBVar = tkinter.BooleanVar(value=False)
         multiIndex4_tkBVar = tkinter.BooleanVar(value=False)
         multiIndex5_tkBVar = tkinter.BooleanVar(value=False)
+        tag_tkSVar = tkinter.StringVar(value="")
 
         window_tL = tkinter.Toplevel()
         window_tL.title("Question Manager")
-        window_tL.geometry("500x500")
+        window_tL.geometry("500x600")
         window_tL.resizable(width=False, height=False)
-        menu_frm = tkinter.Frame(window_tL)
-        questionBank_lbl = tkinter.Label(menu_frm, text="Selected question:", anchor="w")
-        questionBank_comBx = tkinter.ttk.Combobox(menu_frm, width=60, height=10)
-        header_frm = tkinter.Frame(window_tL)
-        clear_btn = tkinter.Button(header_frm, width=20, text="Clear Selected Question", command=clear, state="disabled")
-        clearAll_btn = tkinter.Button(header_frm, width=16, text="Clear All Questions", command=clearAll, state="disabled")
-        load_btn = tkinter.Button(header_frm, width=13, text="Load Questions", command=load)
-        save_btn = tkinter.Button(header_frm, width=13, text="Save Questions", command=save, state="disabled")
+
+        questionBank_frm = tkinter.LabelFrame(window_tL, text="Question Bank")
+        questionBank_lbl = tkinter.Label(questionBank_frm, text="Selected question:", anchor="w")
+        questionBank_comBx = tkinter.ttk.Combobox(questionBank_frm, height=10)
+        questionBankButtons_frm = tkinter.Frame(questionBank_frm)
+        clear_btn = tkinter.Button(questionBankButtons_frm, text="Clear Selected Question", command=clear, state="disabled")
+        clearAll_btn = tkinter.Button(questionBankButtons_frm, text="Clear All Questions", command=clearAll, state="disabled")
+        load_btn = tkinter.Button(questionBankButtons_frm, text="Load Questions", command=load)
+        save_btn = tkinter.Button(questionBankButtons_frm, text="Save Questions", command=save, state="disabled")
+        questionBank_comBx.bind("<<ComboboxSelected>>", updateForm)
+        questionBank_frm.grid(row=0, column=0, sticky="ew", padx=5)
+        questionBank_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=5)
+        questionBank_comBx.grid(row=0, column=1, sticky="ew", padx=(0,5), pady=5)
+        questionBankButtons_frm.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(0,5))
+        questionBank_frm.columnconfigure(0, weight=1)
+        questionBank_frm.columnconfigure(1, weight=100)
+        clear_btn.grid(row=0, column=0, padx=(0,5), sticky="ew")
+        clearAll_btn.grid(row=0, column=1, padx=(0,5), sticky="ew")
+        load_btn.grid(row=0, column=2, padx=(0,5), sticky="ew")
+        save_btn.grid(row=0, column=3, sticky="ew")
+        questionBankButtons_frm.columnconfigure(0, weight=2)
+        questionBankButtons_frm.columnconfigure(1, weight=2)
+        questionBankButtons_frm.columnconfigure(2, weight=1)
+        questionBankButtons_frm.columnconfigure(3, weight=1)
+
+        error_lbl = tkinter.Label(window_tL, text="This question is not configured properly and will not appear in the exam.\n" \
+            "Please check that all fields are filled out with proper values.", fg="red")
+        error_lbl.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,0))
+
         question_frm = tkinter.LabelFrame(window_tL, text="Question")
-        question_txt = tkinter.Text(question_frm, width=57, height=3)
+        question_txt = tkinter.Text(question_frm, height=3)
         question_yScb = tkinter.Scrollbar(question_frm, orient=tkinter.VERTICAL, command=question_txt.yview)
         question_txt.config(yscrollcommand=question_yScb.set)
-        options_frm = tkinter.LabelFrame(window_tL, text="Options")
-        topOptions_frm = tkinter.Frame(options_frm)
-        points_lbl = tkinter.Label(topOptions_frm, text="Point Value:", anchor="w")
-        points_ent = tkinter.Entry(topOptions_frm, width=8, textvariable=points_tkSVar)
-        typeSingle_rad = tkinter.Radiobutton(topOptions_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0, command=enableChoices)
-        choiceAmount_lbl = tkinter.Label(topOptions_frm, text="Choices:", anchor="w")
-        choiceAmount_spnBx = tkinter.ttk.Spinbox(topOptions_frm, from_=2, to=5, command=enableChoices, textvariable=self.choiceAmount_tkIVar, state="readonly", width=4)
-        bottomOptions_frm = tkinter.Frame(options_frm)
-        time_lbl = tkinter.Label(bottomOptions_frm, text="Time Limit (in seconds):", anchor="w")
-        time_ent = tkinter.Entry(bottomOptions_frm, width=8, textvariable=time_tkSVar)
-        typeMulti_rad = tkinter.Radiobutton(bottomOptions_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1, command=enableChoices)
-        answers_frm = tkinter.LabelFrame(window_tL, text="Answers", relief="groove", bd=2)
-        choice1_frm = tkinter.Frame(answers_frm)
-        choice1_rad = tkinter.Radiobutton(choice1_frm, variable=self.choiceIndex_tkIVar, value=0)
-        choice1_chk = tkinter.Checkbutton(choice1_frm, variable=multiIndex1_tkBVar, state="disabled")
-        choice1_txt = tkinter.Text(choice1_frm, width=52, height=2)
-        choice2_frm = tkinter.Frame(answers_frm)
-        choice2_rad = tkinter.Radiobutton(choice2_frm, variable=self.choiceIndex_tkIVar, value=1)
-        choice2_chk = tkinter.Checkbutton(choice2_frm, variable=multiIndex2_tkBVar, state="disabled")
-        choice2_txt = tkinter.Text(choice2_frm, width=52, height=2)
-        choice3_frm = tkinter.Frame(answers_frm)
-        choice3_rad = tkinter.Radiobutton(choice3_frm, variable=self.choiceIndex_tkIVar, value=2, state="disabled")
-        choice3_chk = tkinter.Checkbutton(choice3_frm, variable=multiIndex3_tkBVar, state="disabled")
-        choice3_txt = tkinter.Text(choice3_frm, width=52, height=2, state="disabled", bg="#dfdfdf")
-        choice4_frm = tkinter.Frame(answers_frm)
-        choice4_rad = tkinter.Radiobutton(choice4_frm, variable=self.choiceIndex_tkIVar, value=3, state="disabled")
-        choice4_chk = tkinter.Checkbutton(choice4_frm, variable=multiIndex4_tkBVar, state="disabled")
-        choice4_txt = tkinter.Text(choice4_frm, width=52, height=2, state="disabled", bg="#dfdfdf")
-        choice5_frm = tkinter.Frame(answers_frm)
-        choice5_rad = tkinter.Radiobutton(choice5_frm, variable=self.choiceIndex_tkIVar, value=4, state="disabled")
-        choice5_chk = tkinter.Checkbutton(choice5_frm, variable=multiIndex5_tkBVar, state="disabled")
-        choice5_txt = tkinter.Text(choice5_frm, width=52, height=2, state="disabled", bg="#dfdfdf")
-
         question_txt.bind("<KeyRelease>", updateDisplayList)
-        questionBank_comBx.bind("<<ComboboxSelected>>", updateForm)
+        question_frm.grid(row=2, column=0, sticky="ew", padx=5)
+        question_txt.grid(row=0, column=0, sticky="ew", padx=(5,2), pady=5)
+        question_yScb.grid(row=0, column=1, padx=(0,5), pady=5)
+        question_frm.columnconfigure(0, weight=100)
+        question_frm.columnconfigure(1, weight=1)
 
-        menu_frm.place(x=5, y=5)
-        questionBank_lbl.pack(side="left")
-        questionBank_comBx.pack(fill="x", expand="true", padx=(4,0))
-        header_frm.place(x=5, y=30)
-        clear_btn.pack(side="left")
-        clearAll_btn.pack(side="left", padx=(5,0))
-        load_btn.pack(side="left", padx=(5,0))
-        save_btn.pack(side="left", padx=(5,0))
-        question_frm.place(x=5, y=65)
-        question_yScb.pack(side="right", fill="y", padx=(5,0), pady=5)
-        question_txt.pack(fill="x", expand="true", padx=(5,0), pady=5)
-        options_frm.place(x=5, y=155)
-        topOptions_frm.pack(side="top", anchor="w", padx=5, pady=(5,0))
-        points_lbl.pack(side="left")
-        points_ent.pack(side="left", padx=(0,93))
-        typeSingle_rad.pack(side="left", padx=(0,60))
-        choiceAmount_lbl.pack(side="left")
-        choiceAmount_spnBx.pack(side="left", padx=(0,5))
-        bottomOptions_frm.pack(side="top", anchor="w", padx=5, pady=(0,5))
-        time_lbl.pack(side="left")
-        time_ent.pack(side="left", padx=(0,30))
-        typeMulti_rad.pack(side="left")
-        answers_frm.place(x=5, y=245)
-        choice1_frm.pack(fill="x", pady=5)
-        choice1_rad.pack(side="left", padx=(5,0))
-        choice1_chk.pack(side="left")
-        choice1_txt.pack(fill="x", padx=(0,5), expand="true")
-        choice2_frm.pack(fill="x", pady=5)
-        choice2_rad.pack(side="left", padx=(5,0))
-        choice2_chk.pack(side="left")
-        choice2_txt.pack(fill="x", padx=(0,5), expand="true")
-        choice3_frm.pack(fill="x", pady=5)
-        choice3_rad.pack(side="left", padx=(5,0))
-        choice3_chk.pack(side="left")
-        choice3_txt.pack(fill="x", padx=(0,5), expand="true")
-        choice4_frm.pack(fill="x", pady=5)
-        choice4_rad.pack(side="left", padx=(5,0))
-        choice4_chk.pack(side="left")
-        choice4_txt.pack(fill="x", padx=(0,5), expand="true")
-        choice5_frm.pack(fill="x", pady=5)
-        choice5_rad.pack(side="left", padx=(5,0))
-        choice5_chk.pack(side="left")
-        choice5_txt.pack(fill="x", padx=(0,5), expand="true")
+
+        options_frm = tkinter.LabelFrame(window_tL, text="Options")
+        points_lbl = tkinter.Label(options_frm, text="Question Point Value:", anchor="w")
+        points_ent = tkinter.Entry(options_frm, width=10, textvariable=points_tkSVar)
+        time_lbl = tkinter.Label(options_frm, text="Time Limit (in seconds):", anchor="w")
+        time_ent = tkinter.Entry(options_frm, width=10, textvariable=time_tkSVar)
+        typeSingle_rad = tkinter.Radiobutton(options_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0, command=enableChoices)
+        typeMulti_rad = tkinter.Radiobutton(options_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1, command=enableChoices)
+        choiceAmount_lbl = tkinter.Label(options_frm, text="Choices:", anchor="w")
+        choiceAmount_spnBx = tkinter.ttk.Spinbox(options_frm, width=5, from_=2, to=5, command=enableChoices, textvariable=self.choiceAmount_tkIVar, state="readonly")
+        points_ent.bind("<KeyRelease>", insertData)
+        time_ent.bind("<KeyRelease>", insertData)
+        options_frm.grid(row=3, column=0, sticky="ew", padx=5)
+        points_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=(5,0))
+        points_ent.grid(row=0, column=1, sticky="w", pady=(5,0))
+        time_lbl.grid(row=1, column=0, sticky="w", padx=(5,0), pady=(0,5))
+        time_ent.grid(row=1, column=1, sticky="w", pady=(0,5))
+        typeSingle_rad.grid(row=0, column=2, sticky="w", padx=(10,0), pady=(5,0))
+        typeMulti_rad.grid(row=1, column=2, sticky="w", padx=(10,0), pady=(0,5))
+        choiceAmount_lbl.grid(row=0, column=3, sticky="e", pady=(5,0))
+        choiceAmount_spnBx.grid(row=0, column=4, sticky="ew", padx=(0,5), pady=(5,0))
+        options_frm.columnconfigure(0, weight=1)
+        options_frm.columnconfigure(1, weight=1)
+        options_frm.columnconfigure(2, weight=1)
+        options_frm.columnconfigure(3, weight=1)
+        options_frm.columnconfigure(4, weight=1)
+
+
+        answers_frm = tkinter.LabelFrame(window_tL, text="Answers", relief="groove", bd=2)
+        choice1_rad = tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=0, command=insertData)
+        choice1_chk = tkinter.Checkbutton(answers_frm, variable=multiIndex1_tkBVar, command=insertData, state="disabled")
+        choice1_txt = tkinter.Text(answers_frm, height=2)
+        choice2_rad = tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=1, command=insertData)
+        choice2_chk = tkinter.Checkbutton(answers_frm, variable=multiIndex2_tkBVar, command=insertData, state="disabled")
+        choice2_txt = tkinter.Text(answers_frm, height=2)
+        choice3_rad = tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=2, command=insertData, state="disabled")
+        choice3_chk = tkinter.Checkbutton(answers_frm, variable=multiIndex3_tkBVar, command=insertData, state="disabled")
+        choice3_txt = tkinter.Text(answers_frm, height=2, state="disabled", bg="#dfdfdf")
+        choice4_rad = tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=3, command=insertData, state="disabled")
+        choice4_chk = tkinter.Checkbutton(answers_frm, variable=multiIndex4_tkBVar, command=insertData, state="disabled")
+        choice4_txt = tkinter.Text(answers_frm, height=2, state="disabled", bg="#dfdfdf")
+        choice5_rad = tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=4, command=insertData, state="disabled")
+        choice5_chk = tkinter.Checkbutton(answers_frm, variable=multiIndex5_tkBVar, command=insertData, state="disabled")
+        choice5_txt = tkinter.Text(answers_frm, height=2, state="disabled", bg="#dfdfdf")
+        choice1_txt.bind("<KeyRelease>", insertData)
+        choice2_txt.bind("<KeyRelease>", insertData)
+        choice3_txt.bind("<KeyRelease>", insertData)
+        choice4_txt.bind("<KeyRelease>", insertData)
+        choice5_txt.bind("<KeyRelease>", insertData)
+        answers_frm.grid(row=4, column=0, sticky="ew", padx=5)
+        choice1_rad.grid(row=0, column=0, padx=5)
+        choice1_chk.grid(row=0, column=1, padx=5)
+        choice1_txt.grid(row=0, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+        choice2_rad.grid(row=1, column=0, padx=5)
+        choice2_chk.grid(row=1, column=1, padx=5)
+        choice2_txt.grid(row=1, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+        choice3_rad.grid(row=2, column=0, padx=5)
+        choice3_chk.grid(row=2, column=1, padx=5)
+        choice3_txt.grid(row=2, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+        choice4_rad.grid(row=3, column=0, padx=5)
+        choice4_chk.grid(row=3, column=1, padx=5)
+        choice4_txt.grid(row=3, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+        choice5_rad.grid(row=4, column=0, padx=5)
+        choice5_chk.grid(row=4, column=1, padx=5)
+        choice5_txt.grid(row=4, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+        answers_frm.columnconfigure(0, weight=1)
+        answers_frm.columnconfigure(1, weight=1)
+        answers_frm.columnconfigure(2, weight=100)
+        answers_frm.rowconfigure(0, weight=1)
+        answers_frm.rowconfigure(1, weight=1)
+        answers_frm.rowconfigure(2, weight=1)
+        answers_frm.rowconfigure(3, weight=1)
+        answers_frm.rowconfigure(4, weight=1)
+
+        tags_frm = tkinter.LabelFrame(window_tL, text="Tags", relief="groove", bd=2)
+        newTag_lbl = tkinter.Label(tags_frm, text="Enter new tag:", anchor="w")
+        addTag_ent = tkinter.Entry(tags_frm, textvariable=tag_tkSVar)
+        addTag_btn = tkinter.Button(tags_frm, text="Add Tag", command=addTag)
+        tagList_lbl = tkinter.Label(tags_frm, text="Added tags:", anchor="w")
+        tagList_comBx = tkinter.ttk.Combobox(tags_frm, height=4)
+        clearTag_btn = tkinter.Button(tags_frm, text="Clear Selected Tag", command=clear, state="disabled")
+        clearAllTags_btn = tkinter.Button(tags_frm, text="Clear All Tags", command=clearAll, state="disabled")
+        tags_frm.grid(row=5, column=0, padx=5, sticky="ew")
+        newTag_lbl.grid(column=0, row=0, sticky="w", padx=(5,0), pady=(5,0))
+        addTag_ent.grid(column=1, row=0, sticky="ew", pady=(5,0))
+        addTag_btn.grid(column=2, row=0, sticky="ew", padx=5, columnspan=2)
+        tagList_lbl.grid(column=0, row=1, sticky="w", padx=(5,0), pady=(0,5))
+        tagList_comBx.grid(column=1, row=1, sticky="ew", pady=5)
+        clearTag_btn.grid(column=2, row=1, sticky="ew", padx=5, pady=5)
+        clearAllTags_btn.grid(column=3, row=1, sticky="ew", padx=(0,5), pady=5)
+        tags_frm.columnconfigure(0, weight=1)
+        tags_frm.columnconfigure(1, weight=1)
+        tags_frm.columnconfigure(2, weight=1)
+        tags_frm.columnconfigure(3, weight=1)
+
+        for row_num in range(window_tL.grid_size()[1]):
+            window_tL.rowconfigure(row_num, weight=1)
+
+        for col_num in range(window_tL.grid_size()[0]):
+            window_tL.columnconfigure(col_num, weight=1)
 
         if len(self.questionBank) != 0:
             displayList.clear()
@@ -263,6 +351,7 @@ class interface:
         
         questionBank_comBx.config(values=displayList)
         questionBank_comBx.current(0)
+        tagList_comBx.config(values=tagList)
         updateForm()
         window_tL.focus_set()
         window_tL.grab_set()
