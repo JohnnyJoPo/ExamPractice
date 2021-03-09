@@ -74,17 +74,11 @@ class interface:
                     self.questionBank[selectedIndex][4].append(i)
 
             self.questionBank[selectedIndex][5].clear()
-            self.questionBank[selectedIndex][5].append([choiceArray[0][2].get("1.0","end-1c").strip(), 0])
-            self.questionBank[selectedIndex][5].append([choiceArray[1][2].get("1.0","end-1c").strip(), 1])
-            if self.choiceAmount_tkIVar.get() > 2:
-                self.questionBank[selectedIndex][5].append([choiceArray[2][2].get("1.0","end-1c").strip(), 2])
-                if self.choiceAmount_tkIVar.get() > 3:
-                    self.questionBank[selectedIndex][5].append([choiceArray[3][2].get("1.0","end-1c").strip(), 3])
-                    if self.choiceAmount_tkIVar.get() > 4:
-                        self.questionBank[selectedIndex][5].append([choiceArray[4][2].get("1.0","end-1c").strip(), 4])
+            for i in range(0,self.choiceAmount_tkIVar.get()):
+                self.questionBank[selectedIndex][5].append([choiceArray[i][2].get("1.0","end-1c").strip(), i])
             self.questionBank[selectedIndex][6].clear()
-            for item in tagList:
-                self.questionBank[selectedIndex][6].append(item)
+            for tag in tagList:
+                self.questionBank[selectedIndex][6].append(tag)
             checkValidity()
 
         def updateForm(event=None):
@@ -109,6 +103,15 @@ class interface:
                         choiceArray[i][2].config(state="normal")
                         choiceArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][0])
                 tag_tkSVar.set("")
+                tagList.clear()
+                for tag in self.questionBank[selectedIndex][6]:
+                    tagList.append(tag)
+                if tagList:
+                    tagList_comBx.config(values=tagList)
+                    tagList_comBx.current(len(tagList)-1)
+                else:
+                    tagList_comBx.set("")
+                    tagList_comBx.config(values=tagList)
                 checkValidity()
             else:
                 points_tkSVar.set("1.0")
@@ -118,6 +121,7 @@ class interface:
                 self.choiceIndex_tkIVar.set(0)
                 error_lbl.config(text="\n")
                 tag_tkSVar.set("")
+                tagList.clear()
                 for i in range(0,5):
                     multiIndexArray[i].set(0)
                     choiceArray[i][2].delete("1.0",tkinter.END)
@@ -160,6 +164,12 @@ class interface:
                 typeSingle_rad.config(state="disabled")
                 typeMulti_rad.config(state="disabled")
                 choiceAmount_spnBx.config(state="disabled")
+                tagList_comBx.set("")
+                tagList_comBx.config(values=[], state="disabled")
+                addTag_btn.config(state="disabled")
+                addTag_ent.config(state="disabled")
+                clearTag_btn.config(state="disabled")
+                clearAllTags_btn.config(state="disabled")
                 for i in range(0,5):
                     choiceArray[i][0].config(state="disabled")
                     choiceArray[i][1].config(state="disabled")
@@ -174,6 +184,18 @@ class interface:
                 typeSingle_rad.config(state="normal")
                 typeMulti_rad.config(state="normal")
                 choiceAmount_spnBx.config(state="readonly")
+                addTag_btn.config(state="normal")
+                addTag_ent.config(state="normal")
+                if tagList:
+                    tagList_comBx.config(values=tagList, state="readonly")
+                    tagList_comBx.current(len(tagList)-1)
+                    clearTag_btn.config(state="normal")
+                    clearAllTags_btn.config(state="normal")
+                else:
+                    tagList_comBx.set("")
+                    tagList_comBx.config(values=tagList, state="disabled")
+                    clearTag_btn.config(state="disabled")
+                    clearAllTags_btn.config(state="disabled")
                 for i in range(0,5):
                     if self.choiceAmount_tkIVar.get() > i:
                         choiceArray[i][2].config(state="normal", bg="#ffffff")
@@ -191,13 +213,32 @@ class interface:
                         choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
                         choiceArray[i][2].unbind("<KeyRelease>")
                 insertData()
-                
 
-        def removeTag():
-            _ = 0
-        
         def addTag():
-            _ = 0
+            if tag_tkSVar.get().strip() == "":
+                # throw empty tag error
+                return
+            elif tag_tkSVar.get() not in tagList:
+                tagList.append(tag_tkSVar.get())
+                tag_tkSVar.set("")
+                enableChoices()
+            else:
+                # throw error for tag already being in tagList
+                return
+ 
+        def removeTag():
+            selectedIndex = questionBank_comBx.current()
+            selectedTagIndex = tagList_comBx.current()
+            if selectedIndex == -1:
+                # throw some error
+                return
+            tagList.pop(selectedTagIndex)
+            tagList_comBx.config(values=tagList)
+            enableChoices()
+
+        def removeAllTags():
+            tagList.clear()
+            enableChoices()
 
         def clear():
             _ = 0
@@ -230,7 +271,7 @@ class interface:
 
         questionBank_frm = tkinter.LabelFrame(window_tL, text="Question Bank")
         questionBank_lbl = tkinter.Label(questionBank_frm, text="Selected question:", anchor="w")
-        questionBank_comBx = tkinter.ttk.Combobox(questionBank_frm, height=10)
+        questionBank_comBx = tkinter.ttk.Combobox(questionBank_frm, height=10, state="readonly")
         questionBankButtons_frm = tkinter.Frame(questionBank_frm)
         clear_btn = tkinter.Button(questionBankButtons_frm, text="Clear Selected Question", command=clear, state="disabled")
         clearAll_btn = tkinter.Button(questionBankButtons_frm, text="Clear All Questions", command=clearAll, state="disabled")
@@ -312,12 +353,12 @@ class interface:
 
         tags_frm = tkinter.LabelFrame(window_tL, text="Tags", relief="groove", bd=2)
         newTag_lbl = tkinter.Label(tags_frm, text="Enter new tag:", anchor="w")
-        addTag_ent = tkinter.Entry(tags_frm, textvariable=tag_tkSVar)
+        addTag_ent = tkinter.Entry(tags_frm, textvariable=tag_tkSVar, state="disabled")
         addTag_btn = tkinter.Button(tags_frm, text="Add Tag", command=addTag)
         tagList_lbl = tkinter.Label(tags_frm, text="Added tags:", anchor="w")
-        tagList_comBx = tkinter.ttk.Combobox(tags_frm, height=4)
-        clearTag_btn = tkinter.Button(tags_frm, text="Clear Selected Tag", command=clear, state="disabled")
-        clearAllTags_btn = tkinter.Button(tags_frm, text="Clear All Tags", command=clearAll, state="disabled")
+        tagList_comBx = tkinter.ttk.Combobox(tags_frm, height=4, state="disabled")
+        clearTag_btn = tkinter.Button(tags_frm, text="Clear Selected Tag", command=removeTag, state="disabled")
+        clearAllTags_btn = tkinter.Button(tags_frm, text="Clear All Tags", command=removeAllTags, state="disabled")
         tags_frm.grid(row=5, column=0, padx=5, sticky="ew")
         newTag_lbl.grid(column=0, row=0, sticky="w", padx=(5,0), pady=(5,0))
         addTag_ent.grid(column=1, row=0, sticky="ew", pady=(5,0))
