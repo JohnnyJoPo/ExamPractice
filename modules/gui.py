@@ -37,7 +37,7 @@ class interface:
             if len(displayList) - 1 == selectedIndex:
                 if question.strip() != "":
                     displayList.insert(selectedIndex, question.strip())
-                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [0], [["", 0], ["", 1]], [], False])
+                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [0], [[0, ""], [1, ""]], [], False])
             else:
                 if question.strip() == "":
                     displayList.pop(selectedIndex)
@@ -70,16 +70,15 @@ class interface:
             self.questionBank[selectedIndex][3] = self.questionType_tkIVar.get()
             self.questionBank[selectedIndex][4].clear()
             for i in range(0,5):
-                if (self.choiceIndex_tkIVar.get() == i and self.questionType_tkIVar.get() == 0) or multiIndexArray[i].get() == True:
+                if (self.choiceIndex_tkIVar.get() == i and self.questionType_tkIVar.get() == 0) or (multiIndexArray[i].get() == True and self.questionType_tkIVar.get() == 1):
                     self.questionBank[selectedIndex][4].append(i)
-
             self.questionBank[selectedIndex][5].clear()
             for i in range(0,self.choiceAmount_tkIVar.get()):
-                self.questionBank[selectedIndex][5].append([choiceArray[i][2].get("1.0","end-1c").strip(), i])
+                self.questionBank[selectedIndex][5].append([i, choiceArray[i][2].get("1.0","end-1c").strip()])
             self.questionBank[selectedIndex][6].clear()
             for tag in tagList:
                 self.questionBank[selectedIndex][6].append(tag)
-            checkValidity()
+            checkValidity(0, None)
 
         def updateForm(event=None):
             selectedIndex = questionBank_comBx.current()
@@ -101,7 +100,7 @@ class interface:
                     choiceArray[i][2].delete("1.0",tkinter.END)
                     if i < len(self.questionBank[selectedIndex][5]):
                         choiceArray[i][2].config(state="normal")
-                        choiceArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][0])
+                        choiceArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][1])
                 tag_tkSVar.set("")
                 tagList.clear()
                 for tag in self.questionBank[selectedIndex][6]:
@@ -112,7 +111,7 @@ class interface:
                 else:
                     tagList_comBx.set("")
                     tagList_comBx.config(values=tagList)
-                checkValidity()
+                checkValidity(0, None)
             else:
                 points_tkSVar.set("1.0")
                 time_tkSVar.set("0")
@@ -127,9 +126,12 @@ class interface:
                     choiceArray[i][2].delete("1.0",tkinter.END)
             enableChoices()
 
-        def checkValidity():
+        def checkValidity(mode, checkIndex):
             valid = True
-            selectedIndex = questionBank_comBx.current()
+            if mode == 0:
+                selectedIndex = questionBank_comBx.current()
+            else:
+                selectedIndex = checkIndex
             try:
                 if float(self.questionBank[selectedIndex][1]) < 0:
                     raise ValueError
@@ -142,21 +144,30 @@ class interface:
                 if not self.questionBank[selectedIndex][4]:
                     raise ValueError
                 for inArray in self.questionBank[selectedIndex][5]:
-                    if inArray[0].strip() == "":
+                    if inArray[1].strip() == "":
                         raise ValueError
             except ValueError:
                 valid = False
             if valid:
-                error_lbl.config(text="\n")
                 self.questionBank[selectedIndex][7] = True
+                if mode == 0:
+                    error_lbl.config(text="\n")
             else:
-                error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
-                    "Please check that all fields are filled out with proper values.")
                 self.questionBank[selectedIndex][7] = False
+                if mode == 0:
+                    error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
+                        "Please check that all fields are filled out with proper values.")
 
         def enableChoices():
             selectedIndex = questionBank_comBx.current()
+            if self.questionBank:
+                clearAll_btn.config(state="normal")
+                save_btn.config(state="normal")
+            else:
+                clearAll_btn.config(state="disabled")
+                save_btn.config(state="disabled")  
             if selectedIndex == len(displayList) - 1:
+                clear_btn.config(state="disabled")  
                 points_ent.config(state="disabled")
                 points_ent.unbind("<KeyRelease>")
                 time_ent.config(state="disabled")
@@ -177,6 +188,7 @@ class interface:
                     choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
                     choiceArray[i][2].unbind("<KeyRelease>")
             else:
+                clear_btn.config(state="normal")
                 points_ent.config(state="normal")
                 points_ent.bind("<KeyRelease>", insertData)
                 time_ent.config(state="normal")
@@ -206,10 +218,14 @@ class interface:
                             choiceArray[i][1].deselect()
                         else:
                             choiceArray[i][0].config(state="disabled")
+                            choiceArray[0][0].select()
                             choiceArray[i][1].config(state="normal")
                     else:
                         choiceArray[i][0].config(state="disabled")
+                        if self.questionType_tkIVar.get() == 1:
+                            choiceArray[0][0].select()
                         choiceArray[i][1].config(state="disabled")
+                        choiceArray[i][1].deselect()
                         choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
                         choiceArray[i][2].unbind("<KeyRelease>")
                 insertData()
@@ -241,19 +257,125 @@ class interface:
             enableChoices()
 
         def clear():
-            _ = 0
-            # updateForm()
+            selectedIndex = questionBank_comBx.current()
+            self.questionBank.pop(selectedIndex)
+            displayList.pop(selectedIndex)
+            questionBank_comBx.config(values=displayList)
+            questionBank_comBx.current(0)
+            updateForm()
 
         def clearAll():
-            _ = 0
-            # updateForm()
+            if len(displayList) > 1:
+                self.questionBank.clear()
+                displayList.clear()
+                displayList.append("<add new question>")
+                questionBank_comBx.config(values=displayList)
+                questionBank_comBx.current(0)
+                updateForm()
 
         def load():
-            #_ = 0
-            print(self.questionBank)
+            inFilePath = tkinter.filedialog.askopenfilename(\
+                parent=window_tL,
+                initialdir = os.getcwd(),
+                title = "Select file",\
+                filetypes = (("text files","*.txt"),("all files","*.*")))
+            if inFilePath == "":
+                return
+            self.questionBank.clear()
+            displayList.clear()
+            inFile = open(inFilePath, "r")
+            count = -1
+            for inString in inFile:
+                inString = inString.replace("\\n", "\n").rstrip("\n")
+                if inString == "":
+                    continue
+                if inString[:10] == "QUESTION: ":
+                    self.questionBank.append([inString[10:], 1.0, 0, 0, [], [], [], False])
+                    displayList.append(inString[10:])
+                    count += 1
+                elif inString[:7] == "VALUE: ":
+                    self.questionBank[count][1] = inString[7:]
+                    try:
+                        if float(self.questionBank[count][1]):
+                            pass
+                        self.questionBank[count][1] = float(self.questionBank[count][1])
+                    except ValueError:
+                        pass
+                elif inString[:6] == "TIME: ":
+                    self.questionBank[count][2] = inString[6:]
+                    try:
+                        if int(self.questionBank[count][2]):
+                            pass
+                        self.questionBank[count][2] = int(self.questionBank[count][2])
+                    except ValueError:
+                        pass
+                elif inString[:14] == "ANSWER-LIMIT: ":
+                    if inString[14:] == "MULTI":
+                        self.questionBank[count][3] = 1
+                    else:
+                        self.questionBank[count][3] = 0
+                elif inString[:19] == "CORRECT-ANSWER(S): ":
+                    self.questionBank[count][4].extend(inString[19:].split(", "))
+                    for i in range(0, len(self.questionBank[count][4])):
+                        try:
+                            if int(self.questionBank[count][4][i]):
+                                pass
+                            self.questionBank[count][4][i] = int(self.questionBank[count][4][i])
+                        except ValueError:
+                            continue
+                elif inString[:7] == "CHOICE ":
+                    for i in range(0,5):
+                        checkString = str(i) + ": "
+                        if inString[7:10] == checkString:
+                            self.questionBank[count][5].append([i, inString[10:]])
+                elif inString[:6] == "TAGS: " and inString[6:] != "NONE":
+                    self.questionBank[count][6].extend(inString[6:].split(", "))
+            for i in range(0, len(self.questionBank)):
+                checkValidity(1, i)
+            inFile.close()
+            displayList.append("<add new question>")
+            questionBank_comBx.config(values=displayList)
+            questionBank_comBx.current(0)
+            updateForm()
    
         def save():
-            _ = 0
+            outFilePath = tkinter.filedialog.asksaveasfilename(\
+                parent=window_tL,\
+                initialdir = os.getcwd(),\
+                title = "Save as",\
+                filetypes = (("text files","*.txt"),("all files","*.*")),\
+                defaultextension='.txt')
+            if outFilePath == "":
+                return
+            outString = ""
+            for question in self.questionBank:
+                outString += "\nQUESTION: " + question[0].replace("\n", "\\n") + "\n" \
+                    "VALUE: " + str(question[1]) + "\n" \
+                    "TIME: " + str(question[2]) + "\n"
+                if question[3] == 0:
+                    outString += "ANSWER-LIMIT: SINGLE" + "\n"
+                else:
+                    outString += "ANSWER-LIMIT: MULTI" + "\n"
+                outString += "CORRECT-ANSWER(S): "
+                for answer in question[4]:
+                    outString += str(answer) + ", "
+                outString = outString.rstrip(", ")
+                outString += "\n"
+                for choice in question[5]:
+                    outString += "CHOICE " + str(choice[0]) + ": " + choice[1].replace("\n", "\\n") + "\n"
+                outString += "TAGS: "
+                if question[6]:
+                    for tag in question[6]:
+                        outString += tag + ", "
+                    outString = outString.rstrip(", ")
+                else:
+                    outString += "NONE"
+                outString += "\n"
+            outString = outString.strip("\n")
+            outFile = open(outFilePath, "w")
+            outFile.write(outString)
+            outFile.close()
+            # questions saved message
 
         displayList = ["<add new question>"]
         tagList = []
@@ -385,7 +507,6 @@ class interface:
             displayList.append("<add new question>")
 
         print(self.questionBank)
-        print(displayList)
         
         questionBank_comBx.config(values=displayList)
         questionBank_comBx.current(0)
