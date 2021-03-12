@@ -1,12 +1,9 @@
 import os
-import os.path
 import sys
 import re
 import tkinter
 import tkinter.ttk
 import tkinter.filedialog
-import random
-import time
 
 import msgBank as m
 
@@ -31,105 +28,59 @@ class interface:
         tkinter.mainloop()
 
     def openQuestionManager(self):
-        def updateDisplayList(event=None):
-            question = question_txt.get("1.0","end-1c")
-            selectedIndex = questionBank_comBx.current()
-            if len(displayList) - 1 == selectedIndex:
+        def QM_updateQuestionDisplayList(event=None):
+            question = QM_question_input_txt.get("1.0","end-1c")
+            selectedIndex = QM_qBank_question_comBx.current()
+            if len(QM_questionDisplayList) - 1 == selectedIndex:
                 if question.strip() != "":
-                    displayList.insert(selectedIndex, question.strip())
+                    QM_questionDisplayList.insert(selectedIndex, question.strip())
                     self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [0], [[0, ""], [1, ""]], [], False])
             else:
                 if question.strip() == "":
-                    displayList.pop(selectedIndex)
+                    QM_questionDisplayList.pop(selectedIndex)
                     self.questionBank.pop(selectedIndex)
-                    points_tkSVar.set("1.0")
-                    time_tkSVar.set("0")
-                    self.choiceAmount_tkIVar.set(2)
-                    self.questionType_tkIVar.set(0)
-                    self.choiceIndex_tkIVar.set(0)
-                    error_lbl.config(text="\n")
-                    tag_tkSVar.set("")
+                    QM_points_tkSVar.set("1.0")
+                    QM_time_tkSVar.set("0")
+                    self.QM_options_quantity_tkIVar.set(2)
+                    self.QM_options_type_tkIVar.set(0)
+                    self.QM_answers_singleChoice_tkIVar.set(0)
+                    QM_error_lbl.config(text="\n")
+                    QM_tag_tkSVar.set("")
                     for i in range(0,5):
-                        multiIndexArray[i].set(0)
-                        choiceArray[i][2].delete("1.0",tkinter.END)
+                        QM_answers_multiChoiceArray[i].set(0)
+                        QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
                 else:
-                    displayList[selectedIndex] = question.strip()
+                    QM_questionDisplayList[selectedIndex] = question.strip()
                     self.questionBank[selectedIndex][0] = question.strip()
 
-            questionBank_comBx.config(values=displayList)
+            QM_qBank_question_comBx.config(values=QM_questionDisplayList)
             if question.strip() == "":
-                questionBank_comBx.current(len(displayList) - 1)       
+                QM_qBank_question_comBx.current(len(QM_questionDisplayList) - 1)       
             else:
-                questionBank_comBx.current(selectedIndex)
-            enableChoices()
+                QM_qBank_question_comBx.current(selectedIndex)
+            QM_enableChoices()
 
-        def insertData(event=None):
-            selectedIndex = questionBank_comBx.current()
-            self.questionBank[selectedIndex][1] = points_tkSVar.get()
-            self.questionBank[selectedIndex][2] = time_tkSVar.get()
-            self.questionBank[selectedIndex][3] = self.questionType_tkIVar.get()
+        def QM_insertData(event=None):
+            selectedIndex = QM_qBank_question_comBx.current()
+            self.questionBank[selectedIndex][1] = QM_points_tkSVar.get()
+            self.questionBank[selectedIndex][2] = QM_time_tkSVar.get()
+            self.questionBank[selectedIndex][3] = self.QM_options_type_tkIVar.get()
             self.questionBank[selectedIndex][4].clear()
             for i in range(0,5):
-                if (self.choiceIndex_tkIVar.get() == i and self.questionType_tkIVar.get() == 0) or (multiIndexArray[i].get() == True and self.questionType_tkIVar.get() == 1):
+                if (self.QM_answers_singleChoice_tkIVar.get() == i and self.QM_options_type_tkIVar.get() == 0) or (QM_answers_multiChoiceArray[i].get() == True and self.QM_options_type_tkIVar.get() == 1):
                     self.questionBank[selectedIndex][4].append(i)
             self.questionBank[selectedIndex][5].clear()
-            for i in range(0,self.choiceAmount_tkIVar.get()):
-                self.questionBank[selectedIndex][5].append([i, choiceArray[i][2].get("1.0","end-1c").strip()])
+            for i in range(0,self.QM_options_quantity_tkIVar.get()):
+                self.questionBank[selectedIndex][5].append([i, QM_answers_widgetArray[i][2].get("1.0","end-1c").strip()])
             self.questionBank[selectedIndex][6].clear()
-            for tag in tagList:
+            for tag in QM_tags_tagList:
                 self.questionBank[selectedIndex][6].append(tag)
-            checkValidity(0, None)
+            QM_checkValidity(0, None)
 
-        def updateForm(event=None):
-            selectedIndex = questionBank_comBx.current()
-            question_txt.delete("1.0",tkinter.END)
-            if len(displayList) - 1 > selectedIndex:
-                question_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
-                points_tkSVar.set(str(self.questionBank[selectedIndex][1]))
-                time_tkSVar.set(str(self.questionBank[selectedIndex][2]))
-                self.choiceAmount_tkIVar.set(len(self.questionBank[selectedIndex][5]))
-                self.questionType_tkIVar.set(self.questionBank[selectedIndex][3])
-                if self.questionBank[selectedIndex][3] == 0:
-                    self.choiceIndex_tkIVar.set(self.questionBank[selectedIndex][4][0])
-                else:
-                    for i in range(0,5):
-                        multiIndexArray[i].set(0)
-                        if i in self.questionBank[selectedIndex][4]:
-                            multiIndexArray[i].set(1)
-                for i in range(0,5):
-                    choiceArray[i][2].delete("1.0",tkinter.END)
-                    if i < len(self.questionBank[selectedIndex][5]):
-                        choiceArray[i][2].config(state="normal")
-                        choiceArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][1])
-                tag_tkSVar.set("")
-                tagList.clear()
-                for tag in self.questionBank[selectedIndex][6]:
-                    tagList.append(tag)
-                if tagList:
-                    tagList_comBx.config(values=tagList)
-                    tagList_comBx.current(len(tagList)-1)
-                else:
-                    tagList_comBx.set("")
-                    tagList_comBx.config(values=tagList)
-                checkValidity(0, None)
-            else:
-                points_tkSVar.set("1.0")
-                time_tkSVar.set("0")
-                self.choiceAmount_tkIVar.set(2)
-                self.questionType_tkIVar.set(0)
-                self.choiceIndex_tkIVar.set(0)
-                error_lbl.config(text="\n")
-                tag_tkSVar.set("")
-                tagList.clear()
-                for i in range(0,5):
-                    multiIndexArray[i].set(0)
-                    choiceArray[i][2].delete("1.0",tkinter.END)
-            enableChoices()
-
-        def checkValidity(mode, checkIndex):
+        def QM_checkValidity(mode, checkIndex):
             valid = True
             if mode == 0:
-                selectedIndex = questionBank_comBx.current()
+                selectedIndex = QM_qBank_question_comBx.current()
             else:
                 selectedIndex = checkIndex
             try:
@@ -151,149 +102,198 @@ class interface:
             if valid:
                 self.questionBank[selectedIndex][7] = True
                 if mode == 0:
-                    error_lbl.config(text="\n")
+                    QM_error_lbl.config(text="\n")
             else:
                 self.questionBank[selectedIndex][7] = False
                 if mode == 0:
-                    error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
+                    QM_error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
                         "Please check that all fields are filled out with proper values.")
 
-        def enableChoices():
-            selectedIndex = questionBank_comBx.current()
-            if self.questionBank:
-                clearAll_btn.config(state="normal")
-                save_btn.config(state="normal")
-            else:
-                clearAll_btn.config(state="disabled")
-                save_btn.config(state="disabled")  
-            if selectedIndex == len(displayList) - 1:
-                clear_btn.config(state="disabled")  
-                points_ent.config(state="disabled")
-                points_ent.unbind("<KeyRelease>")
-                time_ent.config(state="disabled")
-                time_ent.unbind("<KeyRelease>")
-                typeSingle_rad.config(state="disabled")
-                typeMulti_rad.config(state="disabled")
-                choiceAmount_spnBx.config(state="disabled")
-                tagList_comBx.set("")
-                tagList_comBx.config(values=[], state="disabled")
-                addTag_btn.config(state="disabled")
-                addTag_ent.config(state="disabled")
-                clearTag_btn.config(state="disabled")
-                clearAllTags_btn.config(state="disabled")
-                for i in range(0,5):
-                    choiceArray[i][0].config(state="disabled")
-                    choiceArray[i][1].config(state="disabled")
-                    choiceArray[i][2].delete("1.0",tkinter.END)
-                    choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
-                    choiceArray[i][2].unbind("<KeyRelease>")
-            else:
-                clear_btn.config(state="normal")
-                points_ent.config(state="normal")
-                points_ent.bind("<KeyRelease>", insertData)
-                time_ent.config(state="normal")
-                time_ent.bind("<KeyRelease>", insertData)
-                typeSingle_rad.config(state="normal")
-                typeMulti_rad.config(state="normal")
-                choiceAmount_spnBx.config(state="readonly")
-                addTag_btn.config(state="normal")
-                addTag_ent.config(state="normal")
-                if tagList:
-                    tagList_comBx.config(values=tagList, state="readonly")
-                    tagList_comBx.current(len(tagList)-1)
-                    clearTag_btn.config(state="normal")
-                    clearAllTags_btn.config(state="normal")
+        def QM_updateForm(event=None):
+            selectedIndex = QM_qBank_question_comBx.current()
+            QM_question_input_txt.delete("1.0",tkinter.END)
+            if len(QM_questionDisplayList) - 1 > selectedIndex:
+                QM_question_input_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
+                QM_points_tkSVar.set(str(self.questionBank[selectedIndex][1]))
+                QM_time_tkSVar.set(str(self.questionBank[selectedIndex][2]))
+                self.QM_options_quantity_tkIVar.set(len(self.questionBank[selectedIndex][5]))
+                self.QM_options_type_tkIVar.set(self.questionBank[selectedIndex][3])
+                if self.questionBank[selectedIndex][3] == 0:
+                    self.QM_answers_singleChoice_tkIVar.set(self.questionBank[selectedIndex][4][0])
                 else:
-                    tagList_comBx.set("")
-                    tagList_comBx.config(values=tagList, state="disabled")
-                    clearTag_btn.config(state="disabled")
-                    clearAllTags_btn.config(state="disabled")
+                    for i in range(0,5):
+                        QM_answers_multiChoiceArray[i].set(0)
+                        if i in self.questionBank[selectedIndex][4]:
+                            QM_answers_multiChoiceArray[i].set(1)
                 for i in range(0,5):
-                    if self.choiceAmount_tkIVar.get() > i:
-                        choiceArray[i][2].config(state="normal", bg="#ffffff")
-                        choiceArray[i][2].bind("<KeyRelease>", insertData)
-                        if self.questionType_tkIVar.get() == 0:
-                            choiceArray[i][0].config(state="normal")
-                            choiceArray[i][1].config(state="disabled")
-                            choiceArray[i][1].deselect()
-                        else:
-                            choiceArray[i][0].config(state="disabled")
-                            choiceArray[0][0].select()
-                            choiceArray[i][1].config(state="normal")
-                    else:
-                        choiceArray[i][0].config(state="disabled")
-                        if self.questionType_tkIVar.get() == 1:
-                            choiceArray[0][0].select()
-                        choiceArray[i][1].config(state="disabled")
-                        choiceArray[i][1].deselect()
-                        choiceArray[i][2].config(state="disabled", bg="#dfdfdf")
-                        choiceArray[i][2].unbind("<KeyRelease>")
-                insertData()
-
-        def addTag():
-            if tag_tkSVar.get().strip() == "":
-                # throw empty tag error
-                return
-            elif tag_tkSVar.get() not in tagList:
-                tagList.append(tag_tkSVar.get())
-                tag_tkSVar.set("")
-                enableChoices()
+                    QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
+                    if i < len(self.questionBank[selectedIndex][5]):
+                        QM_answers_widgetArray[i][2].config(state="normal")
+                        QM_answers_widgetArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][1])
+                QM_tag_tkSVar.set("")
+                QM_tags_tagList.clear()
+                for tag in self.questionBank[selectedIndex][6]:
+                    QM_tags_tagList.append(tag)
+                if QM_tags_tagList:
+                    QM_tags_tagList_comBx.config(values=QM_tags_tagList)
+                    QM_tags_tagList_comBx.current(len(QM_tags_tagList)-1)
+                else:
+                    QM_tags_tagList_comBx.set("")
+                    QM_tags_tagList_comBx.config(values=QM_tags_tagList)
+                QM_checkValidity(0, None)
             else:
-                # throw error for tag already being in tagList
+                QM_points_tkSVar.set("1.0")
+                QM_time_tkSVar.set("0")
+                self.QM_options_quantity_tkIVar.set(2)
+                self.QM_options_type_tkIVar.set(0)
+                self.QM_answers_singleChoice_tkIVar.set(0)
+                QM_error_lbl.config(text="\n")
+                QM_tag_tkSVar.set("")
+                QM_tags_tagList.clear()
+                for i in range(0,5):
+                    QM_answers_multiChoiceArray[i].set(0)
+                    QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
+            QM_enableChoices()
+
+        def QM_enableChoices():
+            selectedIndex = QM_qBank_question_comBx.current()
+            if self.questionBank:
+                QM_qBank_buttons_clearAll_btn.config(state="normal")
+                QM_qBank_buttons_save_btn.config(state="normal")
+            else:
+                QM_qBank_buttons_clearAll_btn.config(state="disabled")
+                QM_qBank_buttons_save_btn.config(state="disabled")  
+            if selectedIndex == len(QM_questionDisplayList) - 1:
+                QM_qBank_buttons_clear_btn.config(state="disabled")  
+                QM_options_points_ent.config(state="disabled")
+                QM_options_points_ent.unbind("<KeyRelease>")
+                QM_options_time_ent.config(state="disabled")
+                QM_options_time_ent.unbind("<KeyRelease>")
+                QM_options_typeSingle_rad.config(state="disabled")
+                QM_options_typeMulti_rad.config(state="disabled")
+                QM_options_quantity_spnBx.config(state="disabled")
+                QM_tags_tagList_comBx.set("")
+                QM_tags_tagList_comBx.config(values=[], state="disabled")
+                QM_tags_addTag_btn.config(state="disabled")
+                QM_tags_addTag_ent.config(state="disabled")
+                QM_tags_clear_btn.config(state="disabled")
+                QM_tags_clearAll_btn.config(state="disabled")
+                for i in range(0,5):
+                    QM_answers_widgetArray[i][0].config(state="disabled")
+                    QM_answers_widgetArray[i][1].config(state="disabled")
+                    QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
+                    QM_answers_widgetArray[i][2].config(state="disabled", bg="#dfdfdf")
+                    QM_answers_widgetArray[i][2].unbind("<KeyRelease>")
+            else:
+                QM_qBank_buttons_clear_btn.config(state="normal")
+                QM_options_points_ent.config(state="normal")
+                QM_options_points_ent.bind("<KeyRelease>", QM_insertData)
+                QM_options_time_ent.config(state="normal")
+                QM_options_time_ent.bind("<KeyRelease>", QM_insertData)
+                QM_options_typeSingle_rad.config(state="normal")
+                QM_options_typeMulti_rad.config(state="normal")
+                QM_options_quantity_spnBx.config(state="readonly")
+                QM_tags_addTag_btn.config(state="normal")
+                QM_tags_addTag_ent.config(state="normal")
+                if QM_tags_tagList:
+                    QM_tags_tagList_comBx.config(values=QM_tags_tagList, state="readonly")
+                    QM_tags_tagList_comBx.current(len(QM_tags_tagList)-1)
+                    QM_tags_clear_btn.config(state="normal")
+                    QM_tags_clearAll_btn.config(state="normal")
+                else:
+                    QM_tags_tagList_comBx.set("")
+                    QM_tags_tagList_comBx.config(values=QM_tags_tagList, state="disabled")
+                    QM_tags_clear_btn.config(state="disabled")
+                    QM_tags_clearAll_btn.config(state="disabled")
+                for i in range(0,5):
+                    if self.QM_options_quantity_tkIVar.get() > i:
+                        QM_answers_widgetArray[i][2].config(state="normal", bg="#ffffff")
+                        QM_answers_widgetArray[i][2].bind("<KeyRelease>", QM_insertData)
+                        if self.QM_options_type_tkIVar.get() == 0:
+                            QM_answers_widgetArray[i][0].config(state="normal")
+                            QM_answers_widgetArray[i][1].config(state="disabled")
+                            QM_answers_widgetArray[i][1].deselect()
+                        else:
+                            QM_answers_widgetArray[i][0].config(state="disabled")
+                            QM_answers_widgetArray[0][0].select()
+                            QM_answers_widgetArray[i][1].config(state="normal")
+                    else:
+                        QM_answers_widgetArray[i][0].config(state="disabled")
+                        if self.QM_options_type_tkIVar.get() == 1:
+                            QM_answers_widgetArray[0][0].select()
+                        QM_answers_widgetArray[i][1].config(state="disabled")
+                        QM_answers_widgetArray[i][1].deselect()
+                        QM_answers_widgetArray[i][2].config(state="disabled", bg="#dfdfdf")
+                        QM_answers_widgetArray[i][2].unbind("<KeyRelease>")
+                QM_insertData()
+
+        def QM_clear():
+            selectedIndex = QM_qBank_question_comBx.current()
+            self.questionBank.pop(selectedIndex)
+            QM_questionDisplayList.pop(selectedIndex)
+            QM_qBank_question_comBx.config(values=QM_questionDisplayList)
+            QM_qBank_question_comBx.current(0)
+            QM_updateForm()
+
+        def QM_clearAll():
+            if len(QM_questionDisplayList) > 1:
+                self.questionBank.clear()
+                QM_questionDisplayList.clear()
+                QM_questionDisplayList.append("<add new question>")
+                QM_qBank_question_comBx.config(values=QM_questionDisplayList)
+                QM_qBank_question_comBx.current(0)
+                QM_updateForm()
+
+        def QM_addTag():
+            if not bool(re.match("^[a-zA-Z0-9_]+$", QM_tag_tkSVar.get().strip())):
+                m.display(100, QM_window_tL) # No valid tag entered
+                return
+            elif QM_tag_tkSVar.get().upper().strip() not in [tag.upper() for tag in QM_tags_tagList]:
+                QM_tags_tagList.append(QM_tag_tkSVar.get().strip())
+                QM_tag_tkSVar.set("")
+                QM_enableChoices()
+            else:
+                m.display(101, QM_window_tL) # Tag already added
                 return
  
-        def removeTag():
-            selectedIndex = questionBank_comBx.current()
-            selectedTagIndex = tagList_comBx.current()
+        def QM_removeTag():
+            selectedIndex = QM_qBank_question_comBx.current()
+            selectedTagIndex = QM_tags_tagList_comBx.current()
             if selectedIndex == -1:
-                # throw some error
+                m.display(102, QM_window_tL) # No tag selected for deletion
                 return
-            tagList.pop(selectedTagIndex)
-            tagList_comBx.config(values=tagList)
-            enableChoices()
+            QM_tags_tagList.pop(selectedTagIndex)
+            QM_tags_tagList_comBx.config(values=QM_tags_tagList)
+            QM_enableChoices()
 
-        def removeAllTags():
-            tagList.clear()
-            enableChoices()
+        def QM_removeAllTags():
+            QM_tags_tagList.clear()
+            QM_enableChoices()
 
-        def clear():
-            selectedIndex = questionBank_comBx.current()
-            self.questionBank.pop(selectedIndex)
-            displayList.pop(selectedIndex)
-            questionBank_comBx.config(values=displayList)
-            questionBank_comBx.current(0)
-            updateForm()
-
-        def clearAll():
-            if len(displayList) > 1:
-                self.questionBank.clear()
-                displayList.clear()
-                displayList.append("<add new question>")
-                questionBank_comBx.config(values=displayList)
-                questionBank_comBx.current(0)
-                updateForm()
-
-        def load():
+        def QM_load():
             inFilePath = tkinter.filedialog.askopenfilename(\
-                parent=window_tL,
+                parent=QM_window_tL,
                 initialdir = os.getcwd(),
                 title = "Select file",\
                 filetypes = (("text files","*.txt"),("all files","*.*")))
             if inFilePath == "":
                 return
+            if not m.display(103, QM_window_tL): # Confirm question reset
+                return
             self.questionBank.clear()
-            displayList.clear()
+            QM_questionDisplayList.clear()
             inFile = open(inFilePath, "r")
             count = -1
+            warningMsg = False
             for inString in inFile:
                 inString = inString.replace("\\n", "\n").rstrip("\n")
                 if inString == "":
                     continue
-                if inString[:10] == "QUESTION: ":
+                if inString[:10].upper() == "QUESTION: ":
                     self.questionBank.append([inString[10:], 1.0, 0, 0, [], [], [], False])
-                    displayList.append(inString[10:])
+                    QM_questionDisplayList.append(inString[10:])
                     count += 1
-                elif inString[:7] == "VALUE: ":
+                elif inString[:7].upper() == "VALUE: ":
                     self.questionBank[count][1] = inString[7:]
                     try:
                         if float(self.questionBank[count][1]):
@@ -301,7 +301,7 @@ class interface:
                         self.questionBank[count][1] = float(self.questionBank[count][1])
                     except ValueError:
                         pass
-                elif inString[:6] == "TIME: ":
+                elif inString[:6].upper() == "TIME: ":
                     self.questionBank[count][2] = inString[6:]
                     try:
                         if int(self.questionBank[count][2]):
@@ -309,12 +309,12 @@ class interface:
                         self.questionBank[count][2] = int(self.questionBank[count][2])
                     except ValueError:
                         pass
-                elif inString[:14] == "ANSWER-LIMIT: ":
-                    if inString[14:] == "MULTI":
+                elif inString[:14].upper() == "ANSWER-LIMIT: ":
+                    if inString[14:].upper() == "MULTI":
                         self.questionBank[count][3] = 1
                     else:
                         self.questionBank[count][3] = 0
-                elif inString[:19] == "CORRECT-ANSWER(S): ":
+                elif inString[:19].upper() == "CORRECT-ANSWER(S): ":
                     self.questionBank[count][4].extend(inString[19:].split(", "))
                     for i in range(0, len(self.questionBank[count][4])):
                         try:
@@ -323,26 +323,46 @@ class interface:
                             self.questionBank[count][4][i] = int(self.questionBank[count][4][i])
                         except ValueError:
                             continue
-                elif inString[:7] == "CHOICE ":
+                elif inString[:7].upper() == "CHOICE ":
                     for i in range(0,5):
                         checkString = str(i) + ": "
                         if inString[7:10] == checkString:
                             self.questionBank[count][5].append([i, inString[10:]])
-                elif inString[:6] == "TAGS: " and inString[6:] != "NONE":
+                elif inString[:6].upper() == "TAGS: " and inString[6:].upper() != "NONE":
                     self.questionBank[count][6].extend(inString[6:].split(", "))
             for i in range(0, len(self.questionBank)):
-                checkValidity(1, i)
+                if len(self.questionBank[i][4]) == 0:
+                    self.questionBank[i][4].append(0)
+                    warningMsg = True
+                if len(self.questionBank[i][5]) <= 1:
+                    self.questionBank[i][5].clear()
+                    self.questionBank[i][5].extend([[0, ""], [1, ""]])
+                    warningMsg = True
+                filteredQM_tags_tagList = []
+                for tag in self.questionBank[i][6]:
+                    if bool(re.match("^[a-zA-Z0-9_]+$", tag)):
+                        filteredQM_tags_tagList.append(tag)
+                    else:
+                        warningMsg = True
+                self.questionBank[i][6].clear()
+                for tag in filteredQM_tags_tagList:
+                    self.questionBank[i][6].append(tag)
+                QM_checkValidity(1, i)
             inFile.close()
-            displayList.append("<add new question>")
-            questionBank_comBx.config(values=displayList)
-            questionBank_comBx.current(0)
-            updateForm()
+            QM_questionDisplayList.append("<add new question>")
+            QM_qBank_question_comBx.config(values=QM_questionDisplayList)
+            QM_qBank_question_comBx.current(0)
+            QM_updateForm()
+            if warningMsg:
+                m.display(104, QM_window_tL) # Questions QM_load warning
+            else:
+                m.display(105, QM_window_tL) # Questions QM_loaded successfully
    
-        def save():
+        def QM_save():
             outFilePath = tkinter.filedialog.asksaveasfilename(\
-                parent=window_tL,\
+                parent=QM_window_tL,\
                 initialdir = os.getcwd(),\
-                title = "Save as",\
+                title = "QM_save as",\
                 filetypes = (("text files","*.txt"),("all files","*.*")),\
                 defaultextension='.txt')
             if outFilePath == "":
@@ -375,145 +395,140 @@ class interface:
             outFile = open(outFilePath, "w")
             outFile.write(outString)
             outFile.close()
-            # questions saved message
+            m.display(106, QM_window_tL) # Questions QM_saved successfully
 
-        displayList = ["<add new question>"]
-        tagList = []
-        points_tkSVar = tkinter.StringVar()
-        time_tkSVar = tkinter.StringVar()
-        self.choiceAmount_tkIVar = tkinter.IntVar(value=2)
-        self.questionType_tkIVar = tkinter.IntVar(value=0)
-        self.choiceIndex_tkIVar = tkinter.IntVar(value=0)
-        tag_tkSVar = tkinter.StringVar(value="")
+        QM_questionDisplayList = ["<add new question>"]
+        QM_points_tkSVar = tkinter.StringVar()
+        QM_time_tkSVar = tkinter.StringVar()
+        QM_tag_tkSVar = tkinter.StringVar(value="")
 
-        window_tL = tkinter.Toplevel()
-        window_tL.title("Question Manager")
-        window_tL.geometry("500x600")
-        window_tL.resizable(width=False, height=False)
+        QM_window_tL = tkinter.Toplevel()
+        QM_window_tL.title("Question Manager")
+        QM_window_tL.geometry("500x600")
+        QM_window_tL.resizable(width=False, height=False)
 
-        questionBank_frm = tkinter.LabelFrame(window_tL, text="Question Bank")
-        questionBank_lbl = tkinter.Label(questionBank_frm, text="Selected question:", anchor="w")
-        questionBank_comBx = tkinter.ttk.Combobox(questionBank_frm, height=10, state="readonly")
-        questionBankButtons_frm = tkinter.Frame(questionBank_frm)
-        clear_btn = tkinter.Button(questionBankButtons_frm, text="Clear Selected Question", command=clear, state="disabled")
-        clearAll_btn = tkinter.Button(questionBankButtons_frm, text="Clear All Questions", command=clearAll, state="disabled")
-        load_btn = tkinter.Button(questionBankButtons_frm, text="Load Questions", command=load)
-        save_btn = tkinter.Button(questionBankButtons_frm, text="Save Questions", command=save, state="disabled")
-        questionBank_comBx.bind("<<ComboboxSelected>>", updateForm)
-        questionBank_frm.grid(row=0, column=0, sticky="ew", padx=5)
-        questionBank_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=5)
-        questionBank_comBx.grid(row=0, column=1, sticky="ew", padx=(0,5), pady=5)
-        questionBankButtons_frm.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(0,5))
-        questionBank_frm.columnconfigure(0, weight=1)
-        questionBank_frm.columnconfigure(1, weight=100)
-        clear_btn.grid(row=0, column=0, padx=(0,5), sticky="ew")
-        clearAll_btn.grid(row=0, column=1, padx=(0,5), sticky="ew")
-        load_btn.grid(row=0, column=2, padx=(0,5), sticky="ew")
-        save_btn.grid(row=0, column=3, sticky="ew")
-        questionBankButtons_frm.columnconfigure(0, weight=2)
-        questionBankButtons_frm.columnconfigure(1, weight=2)
-        questionBankButtons_frm.columnconfigure(2, weight=1)
-        questionBankButtons_frm.columnconfigure(3, weight=1)
+        QM_qBank_frm = tkinter.LabelFrame(QM_window_tL, text="Question Bank")
+        QM_qBank_question_lbl = tkinter.Label(QM_qBank_frm, text="Selected question:", anchor="w")
+        QM_qBank_question_comBx = tkinter.ttk.Combobox(QM_qBank_frm, height=10, state="readonly")
+        QM_qBank_question_comBx.bind("<<ComboboxSelected>>", QM_updateForm)
+        QM_qBank_buttons_frm = tkinter.Frame(QM_qBank_frm)
+        QM_qBank_buttons_clear_btn = tkinter.Button(QM_qBank_buttons_frm, text="Clear Selected Question", command=QM_clear, state="disabled")
+        QM_qBank_buttons_clearAll_btn = tkinter.Button(QM_qBank_buttons_frm, text="Clear All Questions", command=QM_clearAll, state="disabled")
+        QM_qBank_buttons_load_btn = tkinter.Button(QM_qBank_buttons_frm, text="Load Questions", command=QM_load)
+        QM_qBank_buttons_save_btn = tkinter.Button(QM_qBank_buttons_frm, text="Save Questions", command=QM_save, state="disabled")
+        QM_qBank_frm.grid(row=0, column=0, sticky="ew", padx=5)
+        QM_qBank_question_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=5)
+        QM_qBank_question_comBx.grid(row=0, column=1, sticky="ew", padx=(0,5), pady=5)
+        QM_qBank_buttons_frm.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(0,5))
+        QM_qBank_frm.columnconfigure(0, weight=1)
+        QM_qBank_frm.columnconfigure(1, weight=100)
+        QM_qBank_buttons_clear_btn.grid(row=0, column=0, padx=(0,5), sticky="ew")
+        QM_qBank_buttons_clearAll_btn.grid(row=0, column=1, padx=(0,5), sticky="ew")
+        QM_qBank_buttons_load_btn.grid(row=0, column=2, padx=(0,5), sticky="ew")
+        QM_qBank_buttons_save_btn.grid(row=0, column=3, sticky="ew")
+        QM_qBank_buttons_frm.columnconfigure(0, weight=2)
+        QM_qBank_buttons_frm.columnconfigure(1, weight=2)
+        QM_qBank_buttons_frm.columnconfigure(2, weight=1)
+        QM_qBank_buttons_frm.columnconfigure(3, weight=1)
 
-        error_lbl = tkinter.Label(window_tL, text="", fg="red")
-        error_lbl.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,0))
+        QM_error_lbl = tkinter.Label(QM_window_tL, text="", fg="red")
+        QM_error_lbl.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,0))
 
-        question_frm = tkinter.LabelFrame(window_tL, text="Question")
-        question_txt = tkinter.Text(question_frm, height=3)
-        question_yScb = tkinter.Scrollbar(question_frm, orient=tkinter.VERTICAL, command=question_txt.yview)
-        question_txt.config(yscrollcommand=question_yScb.set)
-        question_txt.bind("<KeyRelease>", updateDisplayList)
-        question_frm.grid(row=2, column=0, sticky="ew", padx=5)
-        question_txt.grid(row=0, column=0, sticky="ew", padx=(5,2), pady=5)
-        question_yScb.grid(row=0, column=1, padx=(0,5), pady=5)
-        question_frm.columnconfigure(0, weight=100)
-        question_frm.columnconfigure(1, weight=1)
+        QM_question_frm = tkinter.LabelFrame(QM_window_tL, text="Question")
+        QM_question_input_txt = tkinter.Text(QM_question_frm, height=3)
+        QM_question_input_yScb = tkinter.Scrollbar(QM_question_frm, orient=tkinter.VERTICAL, command=QM_question_input_txt.yview)
+        QM_question_input_txt.config(yscrollcommand=QM_question_input_yScb.set)
+        QM_question_input_txt.bind("<KeyRelease>", QM_updateQuestionDisplayList)
+        QM_question_frm.grid(row=2, column=0, sticky="ew", padx=5)
+        QM_question_input_txt.grid(row=0, column=0, sticky="ew", padx=(5,2), pady=5)
+        QM_question_input_yScb.grid(row=0, column=1, padx=(0,5), pady=5)
+        QM_question_frm.columnconfigure(0, weight=100)
+        QM_question_frm.columnconfigure(1, weight=1)
 
+        self.QM_options_quantity_tkIVar = tkinter.IntVar(value=2)
+        self.QM_options_type_tkIVar = tkinter.IntVar(value=0)
+        QM_options_frm = tkinter.LabelFrame(QM_window_tL, text="Options")
+        QM_options_points_lbl = tkinter.Label(QM_options_frm, text="Question Point Value:", anchor="w")
+        QM_options_points_ent = tkinter.Entry(QM_options_frm, width=10, textvariable=QM_points_tkSVar, state="disabled")
+        QM_options_time_lbl = tkinter.Label(QM_options_frm, text="Time Limit (in seconds):", anchor="w")
+        QM_options_time_ent = tkinter.Entry(QM_options_frm, width=10, textvariable=QM_time_tkSVar, state="disabled")
+        QM_options_typeSingle_rad = tkinter.Radiobutton(QM_options_frm, text="Single Answer", variable=self.QM_options_type_tkIVar, value=0, command=QM_enableChoices, state="disabled")
+        QM_options_typeMulti_rad = tkinter.Radiobutton(QM_options_frm, text="Multiple Answers", variable=self.QM_options_type_tkIVar, value=1, command=QM_enableChoices, state="disabled")
+        QM_options_quantity_lbl = tkinter.Label(QM_options_frm, text="Choices:", anchor="w")
+        QM_options_quantity_spnBx = tkinter.ttk.Spinbox(QM_options_frm, width=5, from_=2, to=5, command=QM_enableChoices, textvariable=self.QM_options_quantity_tkIVar, state="disabled")
+        QM_options_frm.grid(row=3, column=0, sticky="ew", padx=5)
+        QM_options_points_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=(5,0))
+        QM_options_points_ent.grid(row=0, column=1, sticky="w", pady=(5,0))
+        QM_options_time_lbl.grid(row=1, column=0, sticky="w", padx=(5,0), pady=(0,5))
+        QM_options_time_ent.grid(row=1, column=1, sticky="w", pady=(0,5))
+        QM_options_typeSingle_rad.grid(row=0, column=2, sticky="w", padx=(10,0), pady=(5,0))
+        QM_options_typeMulti_rad.grid(row=1, column=2, sticky="w", padx=(10,0), pady=(0,5))
+        QM_options_quantity_lbl.grid(row=0, column=3, sticky="e", pady=(5,0))
+        QM_options_quantity_spnBx.grid(row=0, column=4, sticky="ew", padx=(0,5), pady=(5,0))
+        QM_options_frm.columnconfigure(0, weight=1)
+        QM_options_frm.columnconfigure(1, weight=1)
+        QM_options_frm.columnconfigure(2, weight=1)
+        QM_options_frm.columnconfigure(3, weight=1)
+        QM_options_frm.columnconfigure(4, weight=1)
 
-        options_frm = tkinter.LabelFrame(window_tL, text="Options")
-        points_lbl = tkinter.Label(options_frm, text="Question Point Value:", anchor="w")
-        points_ent = tkinter.Entry(options_frm, width=10, textvariable=points_tkSVar, state="disabled")
-        time_lbl = tkinter.Label(options_frm, text="Time Limit (in seconds):", anchor="w")
-        time_ent = tkinter.Entry(options_frm, width=10, textvariable=time_tkSVar, state="disabled")
-        typeSingle_rad = tkinter.Radiobutton(options_frm, text="Single Answer", variable=self.questionType_tkIVar, value=0, command=enableChoices, state="disabled")
-        typeMulti_rad = tkinter.Radiobutton(options_frm, text="Multiple Answers", variable=self.questionType_tkIVar, value=1, command=enableChoices, state="disabled")
-        choiceAmount_lbl = tkinter.Label(options_frm, text="Choices:", anchor="w")
-        choiceAmount_spnBx = tkinter.ttk.Spinbox(options_frm, width=5, from_=2, to=5, command=enableChoices, textvariable=self.choiceAmount_tkIVar, state="disabled")
-        options_frm.grid(row=3, column=0, sticky="ew", padx=5)
-        points_lbl.grid(row=0, column=0, sticky="w", padx=(5,0), pady=(5,0))
-        points_ent.grid(row=0, column=1, sticky="w", pady=(5,0))
-        time_lbl.grid(row=1, column=0, sticky="w", padx=(5,0), pady=(0,5))
-        time_ent.grid(row=1, column=1, sticky="w", pady=(0,5))
-        typeSingle_rad.grid(row=0, column=2, sticky="w", padx=(10,0), pady=(5,0))
-        typeMulti_rad.grid(row=1, column=2, sticky="w", padx=(10,0), pady=(0,5))
-        choiceAmount_lbl.grid(row=0, column=3, sticky="e", pady=(5,0))
-        choiceAmount_spnBx.grid(row=0, column=4, sticky="ew", padx=(0,5), pady=(5,0))
-        options_frm.columnconfigure(0, weight=1)
-        options_frm.columnconfigure(1, weight=1)
-        options_frm.columnconfigure(2, weight=1)
-        options_frm.columnconfigure(3, weight=1)
-        options_frm.columnconfigure(4, weight=1)
-
-        multiIndexArray = []
-        choiceArray = [[],[],[],[],[]]
-
-        answers_frm = tkinter.LabelFrame(window_tL, text="Answers", relief="groove", bd=2)
-        answers_frm.grid(row=4, column=0, sticky="ew", padx=5)
-        answers_frm.columnconfigure(0, weight=1)
-        answers_frm.columnconfigure(1, weight=1)
-        answers_frm.columnconfigure(2, weight=100)
+        self.QM_answers_singleChoice_tkIVar = tkinter.IntVar(value=0)
+        QM_answers_multiChoiceArray = []
+        QM_answers_widgetArray = [[],[],[],[],[]]
+        QM_answers_frm = tkinter.LabelFrame(QM_window_tL, text="Answers", relief="groove", bd=2)
+        QM_answers_frm.grid(row=4, column=0, sticky="ew", padx=5)
+        QM_answers_frm.columnconfigure(0, weight=1)
+        QM_answers_frm.columnconfigure(1, weight=1)
+        QM_answers_frm.columnconfigure(2, weight=100)
 
         for i in range(0,5):
-            multiIndexArray.append(tkinter.BooleanVar(value=False))
-            choiceArray[i].append(tkinter.Radiobutton(answers_frm, variable=self.choiceIndex_tkIVar, value=i, command=insertData, state="disabled"))
-            choiceArray[i].append(tkinter.Checkbutton(answers_frm, variable=multiIndexArray[i], command=insertData, state="disabled"))
-            choiceArray[i].append(tkinter.Text(answers_frm, height=2, state="disabled", bg="#dfdfdf"))
-            choiceArray[i][0].grid(row=i, column=0, padx=5)
-            choiceArray[i][1].grid(row=i, column=1, padx=5)
-            choiceArray[i][2].grid(row=i, column=2, sticky="ew", padx=(0,5), pady=(0,5))
-            answers_frm.rowconfigure(i, weight=1)
+            QM_answers_multiChoiceArray.append(tkinter.BooleanVar(value=False))
+            QM_answers_widgetArray[i].append(tkinter.Radiobutton(QM_answers_frm, variable=self.QM_answers_singleChoice_tkIVar, value=i, command=QM_insertData, state="disabled"))
+            QM_answers_widgetArray[i].append(tkinter.Checkbutton(QM_answers_frm, variable=QM_answers_multiChoiceArray[i], command=QM_insertData, state="disabled"))
+            QM_answers_widgetArray[i].append(tkinter.Text(QM_answers_frm, height=2, state="disabled", bg="#dfdfdf"))
+            QM_answers_widgetArray[i][0].grid(row=i, column=0, padx=5)
+            QM_answers_widgetArray[i][1].grid(row=i, column=1, padx=5)
+            QM_answers_widgetArray[i][2].grid(row=i, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+            QM_answers_frm.rowconfigure(i, weight=1)
 
-        tags_frm = tkinter.LabelFrame(window_tL, text="Tags", relief="groove", bd=2)
-        newTag_lbl = tkinter.Label(tags_frm, text="Enter new tag:", anchor="w")
-        addTag_ent = tkinter.Entry(tags_frm, textvariable=tag_tkSVar, state="disabled")
-        addTag_btn = tkinter.Button(tags_frm, text="Add Tag", command=addTag)
-        tagList_lbl = tkinter.Label(tags_frm, text="Added tags:", anchor="w")
-        tagList_comBx = tkinter.ttk.Combobox(tags_frm, height=4, state="disabled")
-        clearTag_btn = tkinter.Button(tags_frm, text="Clear Selected Tag", command=removeTag, state="disabled")
-        clearAllTags_btn = tkinter.Button(tags_frm, text="Clear All Tags", command=removeAllTags, state="disabled")
-        tags_frm.grid(row=5, column=0, padx=5, sticky="ew")
-        newTag_lbl.grid(column=0, row=0, sticky="w", padx=(5,0), pady=(5,0))
-        addTag_ent.grid(column=1, row=0, sticky="ew", pady=(5,0))
-        addTag_btn.grid(column=2, row=0, sticky="ew", padx=5, columnspan=2)
-        tagList_lbl.grid(column=0, row=1, sticky="w", padx=(5,0), pady=(0,5))
-        tagList_comBx.grid(column=1, row=1, sticky="ew", pady=5)
-        clearTag_btn.grid(column=2, row=1, sticky="ew", padx=5, pady=5)
-        clearAllTags_btn.grid(column=3, row=1, sticky="ew", padx=(0,5), pady=5)
-        tags_frm.columnconfigure(0, weight=1)
-        tags_frm.columnconfigure(1, weight=1)
-        tags_frm.columnconfigure(2, weight=1)
-        tags_frm.columnconfigure(3, weight=1)
+        QM_tags_tagList = []
+        QM_tags_frm = tkinter.LabelFrame(QM_window_tL, text="Tags", relief="groove", bd=2)
+        QM_tags_newTag_lbl = tkinter.Label(QM_tags_frm, text="Enter new tag:", anchor="w")
+        QM_tags_addTag_ent = tkinter.Entry(QM_tags_frm, textvariable=QM_tag_tkSVar, state="disabled")
+        QM_tags_addTag_btn = tkinter.Button(QM_tags_frm, text="Add Tag", command=QM_addTag)
+        QM_tags_tagList_lbl = tkinter.Label(QM_tags_frm, text="Added tags:", anchor="w")
+        QM_tags_tagList_comBx = tkinter.ttk.Combobox(QM_tags_frm, height=4, state="disabled", values=QM_tags_tagList)
+        QM_tags_clear_btn = tkinter.Button(QM_tags_frm, text="QM_clear Selected Tag", command=QM_removeTag, state="disabled")
+        QM_tags_clearAll_btn = tkinter.Button(QM_tags_frm, text="QM_clear All Tags", command=QM_removeAllTags, state="disabled")
+        QM_tags_frm.grid(row=5, column=0, padx=5, sticky="ew")
+        QM_tags_newTag_lbl.grid(column=0, row=0, sticky="w", padx=(5,0), pady=(5,0))
+        QM_tags_addTag_ent.grid(column=1, row=0, sticky="ew", pady=(5,0))
+        QM_tags_addTag_btn.grid(column=2, row=0, sticky="ew", padx=5, columnspan=2)
+        QM_tags_tagList_lbl.grid(column=0, row=1, sticky="w", padx=(5,0), pady=(0,5))
+        QM_tags_tagList_comBx.grid(column=1, row=1, sticky="ew", pady=5)
+        QM_tags_clear_btn.grid(column=2, row=1, sticky="ew", padx=5, pady=5)
+        QM_tags_clearAll_btn.grid(column=3, row=1, sticky="ew", padx=(0,5), pady=5)
+        QM_tags_frm.columnconfigure(0, weight=1)
+        QM_tags_frm.columnconfigure(1, weight=1)
+        QM_tags_frm.columnconfigure(2, weight=1)
+        QM_tags_frm.columnconfigure(3, weight=1)
 
-        for i in range(window_tL.grid_size()[1]):
-            window_tL.rowconfigure(i, weight=1)
+        for i in range(QM_window_tL.grid_size()[1]):
+            QM_window_tL.rowconfigure(i, weight=1)
 
-        for i in range(window_tL.grid_size()[0]):
-            window_tL.columnconfigure(i, weight=1)
+        for i in range(QM_window_tL.grid_size()[0]):
+            QM_window_tL.columnconfigure(i, weight=1)
 
         if len(self.questionBank) != 0:
-            displayList.clear()
+            QM_questionDisplayList.clear()
             for inArray in self.questionBank:
-                displayList.append(inArray[0])
-            displayList.append("<add new question>")
+                QM_questionDisplayList.append(inArray[0])
+            QM_questionDisplayList.append("<add new question>")
 
-        print(self.questionBank)
-        
-        questionBank_comBx.config(values=displayList)
-        questionBank_comBx.current(0)
-        tagList_comBx.config(values=tagList)
-        updateForm()
-        window_tL.focus_set()
-        window_tL.grab_set()
+        QM_qBank_question_comBx.config(values=QM_questionDisplayList)
+        QM_qBank_question_comBx.current(0)
+        QM_updateForm()
+        QM_window_tL.focus_set()
+        QM_window_tL.grab_set()
 
     def openOptionWindow(self):
         _ = 0
