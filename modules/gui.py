@@ -11,20 +11,25 @@ class interface:
     def __init__(self):
         self.window_tk = tkinter.Tk()
         self.window_tk.title("Exam Practice v1.0")
-        self.window_tk.geometry("300x140")
+        self.window_tk.geometry("300x130")
         self.window_tk.resizable(width=False, height=False)
 
         self.manage_btn = tkinter.Button(self.window_tk, width=18, height=2, text="Manage Questions", command=self.openQuestionManager)
         self.options_btn = tkinter.Button(self.window_tk, width=18, height=2, text="Exam Options", command=self.openOptionWindow)
         self.start_btn = tkinter.Button(self.window_tk, width=38, height=2, text="Begin Exam", state="disabled", command=self.startExam)
         self.exit_btn = tkinter.Button(self.window_tk, width=38, height=1, text="Exit", command=self.exitProgram)
+        self.window_tk.columnconfigure(0, weight=1)
+        self.window_tk.columnconfigure(1, weight=1)
 
-        self.manage_btn.place(x=10, y=10)
-        self.options_btn.place(x=150, y=10)
-        self.start_btn.place(x=10, y=55)
-        self.exit_btn.place(x=10, y=100)
+        self.manage_btn.grid(row=0, column=0, sticky="ew", padx=(5,2), pady=(5,0))
+        self.options_btn.grid(row=0, column=1, sticky="ew", padx=(2,5), pady=(5,0))
+        self.start_btn.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        self.exit_btn.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
 
         self.questionBank = []
+        self.examOptions = []
+        for _ in range(0,9):
+            self.examOptions.append(tkinter.BooleanVar(value=False))
         tkinter.mainloop()
 
     def openQuestionManager(self):
@@ -362,7 +367,7 @@ class interface:
             outFilePath = tkinter.filedialog.asksaveasfilename(\
                 parent=QM_window_tL,\
                 initialdir = os.getcwd(),\
-                title = "QM_save as",\
+                title = "Save as",\
                 filetypes = (("text files","*.txt"),("all files","*.*")),\
                 defaultextension='.txt')
             if outFilePath == "":
@@ -497,8 +502,8 @@ class interface:
         QM_tags_addTag_btn = tkinter.Button(QM_tags_frm, text="Add Tag", command=QM_addTag)
         QM_tags_tagList_lbl = tkinter.Label(QM_tags_frm, text="Added tags:", anchor="w")
         QM_tags_tagList_comBx = tkinter.ttk.Combobox(QM_tags_frm, height=4, state="disabled", values=QM_tags_tagList)
-        QM_tags_clear_btn = tkinter.Button(QM_tags_frm, text="QM_clear Selected Tag", command=QM_removeTag, state="disabled")
-        QM_tags_clearAll_btn = tkinter.Button(QM_tags_frm, text="QM_clear All Tags", command=QM_removeAllTags, state="disabled")
+        QM_tags_clear_btn = tkinter.Button(QM_tags_frm, text="Clear Selected Tag", command=QM_removeTag, state="disabled")
+        QM_tags_clearAll_btn = tkinter.Button(QM_tags_frm, text="Clear All Tags", command=QM_removeAllTags, state="disabled")
         QM_tags_frm.grid(row=5, column=0, padx=5, sticky="ew")
         QM_tags_newTag_lbl.grid(column=0, row=0, sticky="w", padx=(5,0), pady=(5,0))
         QM_tags_addTag_ent.grid(column=1, row=0, sticky="ew", pady=(5,0))
@@ -531,10 +536,72 @@ class interface:
         QM_window_tL.grab_set()
 
     def openOptionWindow(self):
-        _ = 0
+        def EO_updateOptions():
+            if not self.examOptions[2].get() and not self.examOptions[3].get(): # If both exam and question time limits are disabled
+                self.examOptions[4].set(False)
+                EO_displayRemainingTime_chk.config(state="disabled")
+            else:
+                EO_displayRemainingTime_chk.config(state="normal")
+            if self.examOptions[2].get(): # If exam time limit is enabled
+                EO_examTime_lbl.config(state="normal")
+                EO_examTime_spnBx.config(state="readonly")
+            else:
+                EO_examTime_lbl.config(state="disabled")
+                EO_examTime_spnBx.config(state="disabled")
+
+            if self.examOptions[3].get() or self.examOptions[6].get(): # If question time limit or sudden death mode is enabled
+                self.examOptions[5].set(False)
+                EO_enableBacktracking_chk.config(state="disabled")
+            else:
+                EO_enableBacktracking_chk.config(state="normal")
+            if self.examOptions[6].get(): # If sudden death mode is enabled
+                self.examOptions[7].set(False)
+                EO_study_chk.config(state="disabled")
+            else:
+                EO_study_chk.config(state="normal")
+            if self.examOptions[7].get(): # If study mode is enabled
+                self.examOptions[6].set(False)
+                EO_suddenDeath_chk.config(state="disabled")
+            else:
+                EO_suddenDeath_chk.config(state="normal")
+
+        EO_window_tL = tkinter.Toplevel()
+        EO_window_tL.title("Exam Options")
+        EO_window_tL.geometry("300x300")
+        EO_window_tL.resizable(width=False, height=False)
+        EO_window_tL.columnconfigure(0, weight=1)
+        EO_window_tL.columnconfigure(1, weight=100)
+
+        self.EO_examTime_tkIVar =       tkinter.IntVar(value="0")
+        EO_shuffleQuestions_chk =       tkinter.Checkbutton(EO_window_tL, text="Shuffle Exam Questions", variable=self.examOptions[0], anchor="w")
+        EO_shuffleChoices_chk =         tkinter.Checkbutton(EO_window_tL, text="Shuffle Question Choices", variable=self.examOptions[1], anchor="w")
+        EO_enableExamTime_chk =         tkinter.Checkbutton(EO_window_tL, text="Enable Exam Time Limit", variable=self.examOptions[2], command=EO_updateOptions, anchor="w")
+        EO_examTime_lbl =               tkinter.Label(EO_window_tL, text="Exam Time (in minutes):", state="disabled")
+        EO_examTime_spnBx =             tkinter.Spinbox(EO_window_tL, width=5, from_=1, to=180, repeatinterval=4, command=EO_updateOptions, textvariable=self.EO_examTime_tkIVar, state="disabled")
+        EO_enableQuestionTime_chk =     tkinter.Checkbutton(EO_window_tL, text="Enable Question Time Limit", variable=self.examOptions[3], command=EO_updateOptions, anchor="w")
+        EO_displayRemainingTime_chk =   tkinter.Checkbutton(EO_window_tL, text="Display Remaining Time", variable=self.examOptions[4], command=EO_updateOptions, state="disabled", anchor="w")
+        EO_enableBacktracking_chk =     tkinter.Checkbutton(EO_window_tL, text="Enable Previous Question", variable=self.examOptions[5], command=EO_updateOptions, anchor="w")
+        EO_suddenDeath_chk =            tkinter.Checkbutton(EO_window_tL, text="Sudden Death Mode", variable=self.examOptions[6], command=EO_updateOptions, anchor="w")
+        EO_study_chk =                  tkinter.Checkbutton(EO_window_tL, text="Study Mode", variable=self.examOptions[7], command=EO_updateOptions, anchor="w")
+        EO_displayCorrectChoice_chk =   tkinter.Checkbutton(EO_window_tL, text="Show Correct Answers Upon Completion", variable=self.examOptions[8], command=EO_updateOptions, anchor="w")
+
+        EO_shuffleQuestions_chk.grid    (column=0, row=0, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_shuffleChoices_chk.grid      (column=0, row=1, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_enableExamTime_chk.grid      (column=0, row=2, sticky="ew", padx=5, pady=(5,0))
+        EO_examTime_lbl.grid            (column=0, row=3, sticky="w", padx=5, pady=(5,0))
+        EO_examTime_spnBx.grid          (column=1, row=3, sticky="ew", padx=5, pady=(5,0))
+        EO_enableQuestionTime_chk.grid  (column=0, row=4, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_displayRemainingTime_chk.grid(column=0, row=5, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_enableBacktracking_chk.grid  (column=0, row=6, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_suddenDeath_chk.grid         (column=0, row=7, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_study_chk.grid               (column=0, row=8, columnspan=2, sticky="ew", padx=5, pady=(5,0))
+        EO_displayCorrectChoice_chk.grid(column=0, row=9, columnspan=2, sticky="ew", padx=5, pady=5)
+
+        EO_window_tL.focus_set()
+        EO_window_tL.grab_set()
 
     def startExam(self):
-        _ = 0
+        pass
 
     def exitProgram(self):
         self.window_tk.destroy()
