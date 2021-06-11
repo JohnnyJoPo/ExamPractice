@@ -4,6 +4,10 @@ import re
 import tkinter
 import tkinter.ttk
 import tkinter.filedialog
+import functools
+import time
+import random
+import copy
 
 import msgBank as m
 
@@ -18,6 +22,7 @@ class interface:
         self.options_btn = tkinter.Button(self.window_tk, width=18, height=2, text="Exam Options", command=self.openOptionWindow)
         self.start_btn = tkinter.Button(self.window_tk, width=38, height=2, text="Begin Exam", state="disabled", command=self.startExam)
         self.exit_btn = tkinter.Button(self.window_tk, width=38, height=1, text="Exit", command=self.exitProgram)
+        _dummy_lbl = tkinter.Label(self.window_tk)
         self.window_tk.columnconfigure(0, weight=1)
         self.window_tk.columnconfigure(1, weight=1)
 
@@ -26,6 +31,7 @@ class interface:
         self.start_btn.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(5,0))
         self.exit_btn.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
 
+        self.defaultColor = _dummy_lbl.cget("bg")
         self.questionBank = []
         self.examOptions = []
         for _ in range(0,9):
@@ -81,6 +87,7 @@ class interface:
             for tag in QM_tags_tagList:
                 self.questionBank[selectedIndex][6].append(tag)
             QM_checkValidity(0, None)
+            QM_enableExam()
 
         def QM_checkValidity(mode, checkIndex):
             valid = True
@@ -160,7 +167,16 @@ class interface:
                     QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
             QM_enableChoices()
 
+        def QM_enableExam():
+            self.start_btn.config(state="disabled")
+            if self.questionBank:
+                for check in self.questionBank:
+                    if check[7]:
+                        self.start_btn.config(state="normal")
+                        return
+
         def QM_enableChoices():
+            QM_enableExam()
             selectedIndex = QM_qBank_question_comBx.current()
             if self.questionBank:
                 QM_qBank_buttons_clearAll_btn.config(state="normal")
@@ -211,6 +227,12 @@ class interface:
                     QM_tags_clear_btn.config(state="disabled")
                     QM_tags_clearAll_btn.config(state="disabled")
                 for i in range(0,5):
+                    if self.QM_options_type_tkIVar.get() == 0:
+                        QM_answers_widgetArray[i][1].grid_remove()
+                        QM_answers_widgetArray[i][0].grid()
+                    else:
+                        QM_answers_widgetArray[i][0].grid_remove()
+                        QM_answers_widgetArray[i][1].grid()
                     if self.QM_options_quantity_tkIVar.get() > i:
                         QM_answers_widgetArray[i][2].config(state="normal", bg="#ffffff")
                         QM_answers_widgetArray[i][2].bind("<KeyRelease>", QM_insertData)
@@ -482,8 +504,7 @@ class interface:
         QM_answers_frm = tkinter.LabelFrame(QM_window_tL, text="Answers", relief="groove", bd=2)
         QM_answers_frm.grid(row=4, column=0, sticky="ew", padx=5)
         QM_answers_frm.columnconfigure(0, weight=1)
-        QM_answers_frm.columnconfigure(1, weight=1)
-        QM_answers_frm.columnconfigure(2, weight=100)
+        QM_answers_frm.columnconfigure(1, weight=100)
 
         for i in range(0,5):
             QM_answers_multiChoiceArray.append(tkinter.BooleanVar(value=False))
@@ -491,8 +512,9 @@ class interface:
             QM_answers_widgetArray[i].append(tkinter.Checkbutton(QM_answers_frm, variable=QM_answers_multiChoiceArray[i], command=QM_insertData, state="disabled"))
             QM_answers_widgetArray[i].append(tkinter.Text(QM_answers_frm, height=2, state="disabled", bg="#dfdfdf"))
             QM_answers_widgetArray[i][0].grid(row=i, column=0, padx=5)
-            QM_answers_widgetArray[i][1].grid(row=i, column=1, padx=5)
-            QM_answers_widgetArray[i][2].grid(row=i, column=2, sticky="ew", padx=(0,5), pady=(0,5))
+            QM_answers_widgetArray[i][1].grid(row=i, column=0, padx=5)
+            QM_answers_widgetArray[i][1].grid_remove()
+            QM_answers_widgetArray[i][2].grid(row=i, column=1, sticky="ew", padx=(0,5), pady=(0,5))
             QM_answers_frm.rowconfigure(i, weight=1)
 
         QM_tags_tagList = []
@@ -599,9 +621,408 @@ class interface:
 
         EO_window_tL.focus_set()
         EO_window_tL.grab_set()
+        EO_updateOptions()
 
     def startExam(self):
-        pass
+        def EX_exit():
+            EX_window_tL.destroy()
+
+        def EX_finishExam(check):
+            if check:
+                nonlocal EX_exam_currentQuestion
+                if not EX_examQuestions[EX_exam_currentQuestion][8]:
+                    if not m.display(200, EX_window_tL): # No answer selected; Confirm continuing to next question
+                        return
+            nonlocal EX_reviewFlag
+            nonlocal EX_endTime
+            EX_window_tL.geometry("300x140")
+            EX_reviewFlag = True
+            for i in range(0,1):
+                if self.EX_cycleTask[i] != None:
+                    EX_window_tL.after_cancel(self.EX_cycleTask[i])
+                    self.EX_cycleTask[i] = None
+            EX_exam_frm.grid_remove()
+            EX_results_frm.grid()
+            examLength = len(EX_examQuestions)
+            correctAnswers = 0
+            maxPoints = 0.0
+            points = 0.0
+            score = 0.0
+            EX_endTime = int(time.time())
+            minutes = int((EX_endTime - EX_startTime) // 60)
+            seconds = int((EX_endTime - EX_startTime) % 60)
+
+            for question in EX_examQuestions:
+                maxPoints += question[1]
+                checkArray = []
+                for answer in question[8]:
+                    checkArray.append(question[5][answer][0])
+                checkArray.sort()
+                if question[4] == checkArray:
+                    correctAnswers += 1
+                    points += question[1]
+                else:
+                    if question[3]:
+                        partialCredit = 0
+                        for answer in checkArray:
+                            if answer in question[4]:
+                                partialCredit += 1/len(question[4])
+                            else:
+                                partialCredit -= 1/len(question[4])
+                        if partialCredit < 0:
+                            partialCredit = 0.0
+                        points += partialCredit
+            score = (points / maxPoints) * 100
+
+            EX_results_correctAnswerRatio_tkSVar.set("Correct answers: " + str(correctAnswers) + " out of " + str(examLength))
+            EX_results_pointsRatio_tkSVar.set("Points earned: " + format(float(points), ".2f") + " out of " + format(float(maxPoints), ".2f"))
+            EX_results_score_tkSVar.set("Exam score: " + format(float(score), ".2f") + "%")
+            EX_results_time_tkSVar.set("Time used: " + str(minutes) + ":" + format(seconds, "02d"))
+
+        def EX_examResults():
+            EX_window_tL.geometry("300x140")
+            EX_exam_frm.grid_remove()
+            EX_results_frm.grid()
+
+        def EX_changeQuestion(direction):
+            nonlocal EX_exam_currentQuestion
+            if direction == 0:
+                EX_exam_currentQuestion -= 1
+                EX_exam_buttons_next_btn.grid()
+                EX_exam_buttons_finish_btn.grid_remove()
+                if EX_exam_currentQuestion == 0:
+                    EX_exam_buttons_previous_btn.config(state="disabled")
+            else:
+                if (self.examOptions[5].get() and not self.examOptions[6].get()) or EX_reviewFlag:
+                    EX_exam_buttons_previous_btn.config(state="normal")
+                elif self.examOptions[6].get():
+                    checkArray = []
+                    for answer in EX_examQuestions[EX_exam_currentQuestion][8]:
+                        checkArray.append(EX_examQuestions[EX_exam_currentQuestion][5][answer][0])
+                    checkArray.sort()
+                    if EX_examQuestions[EX_exam_currentQuestion][4] != checkArray:
+                        EX_finishExam(False)
+                else:
+                    if not EX_examQuestions[EX_exam_currentQuestion][8] and direction == 1:
+                        if not m.display(200, EX_window_tL): # No answer selected; Confirm continuing to next question
+                            return
+                    elif self.examOptions[3].get() and EX_exam_currentQuestion >= len(EX_examQuestions) - 1:
+                        EX_finishExam(False)
+                        return
+                EX_exam_currentQuestion += 1
+            EX_updateDisplay()
+
+        def EX_updateDisplay():
+            nonlocal EX_exam_currentQuestion
+            nonlocal EX_exam_remainingQuestionTime
+            EX_exam_study_tkSVar.set("")
+            EX_exam_questionVar_tkSVar.set(EX_examQuestions[EX_exam_currentQuestion][0])
+            self.EX_exam_singleAnswer_tkIVar.set(None)
+            for i in range(0,5):
+                EX_exam_choiceArray[i].set("")
+                EX_exam_multiAnswers[i].set(False)
+                EX_exam_question_widgetArray[i][0].config(state="disabled")
+                EX_exam_question_widgetArray[i][1].config(state="disabled")
+                EX_exam_question_widgetArray[i][2].config(state="disabled")
+                EX_exam_question_widgetArray[i][2].config(bg=self.defaultColor)
+                EX_exam_question_widgetArray[i][0].grid_remove()
+                EX_exam_question_widgetArray[i][1].grid_remove()
+            count = 0
+            for choice in EX_examQuestions[EX_exam_currentQuestion][5]:
+                EX_exam_choiceArray[count].set(choice[1])
+                if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+                    if not EX_reviewFlag:
+                        EX_exam_question_widgetArray[count][0].config(state="normal")
+                    else:
+                        EX_exam_buttons_check_btn.grid_remove()
+                    EX_exam_question_widgetArray[count][0].grid()
+                else:
+                    if not EX_reviewFlag:
+                        EX_exam_question_widgetArray[count][1].config(state="normal")
+                    else:
+                        EX_exam_buttons_check_btn.grid_remove()
+                    EX_exam_question_widgetArray[count][1].grid()
+                EX_exam_question_widgetArray[count][2].config(state="normal")
+                count += 1
+            for answer in EX_examQuestions[EX_exam_currentQuestion][8]:
+                if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+                    EX_exam_question_widgetArray[answer][0].select()
+                else:
+                    EX_exam_question_widgetArray[answer][1].select()
+            if EX_exam_currentQuestion >= len(EX_examQuestions) - 1:
+                if not EX_reviewFlag:
+                    EX_exam_buttons_next_btn.grid_remove()
+                    EX_exam_buttons_finish_btn.grid()
+                else:
+                    EX_exam_buttons_next_btn.config(state="disabled")
+            else:
+                if not EX_reviewFlag:
+                    EX_exam_buttons_next_btn.grid()
+                    EX_exam_buttons_finish_btn.grid_remove()
+                else:
+                    EX_exam_buttons_next_btn.config(state="normal")
+            if self.examOptions[3].get() and not EX_reviewFlag:
+                if EX_examQuestions[EX_exam_currentQuestion][2] != 0:
+                    EX_exam_remainingQuestionTime = EX_examQuestions[EX_exam_currentQuestion][2] + 1
+                if self.EX_cycleTask[1] != None:
+                    EX_window_tL.after_cancel(self.EX_cycleTask[1])
+                    self.EX_cycleTask[1] = None
+                if EX_exam_remainingQuestionTime > 0:
+                    EX_cycleQuestionCountdown()
+                else:
+                    EX_exam_remainingQuestionTime_tkSVar.set("Question time remaining: No time limit")
+            elif EX_reviewFlag:
+                EX_checkAnswer()
+
+        def EX_selectAnswer():
+            EX_examQuestions[EX_exam_currentQuestion][8].clear()
+            EX_exam_study_tkSVar.set("")
+            if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+                EX_examQuestions[EX_exam_currentQuestion][8].append(self.EX_exam_singleAnswer_tkIVar.get())
+            else:
+                for i in range(0,5):
+                    if EX_exam_multiAnswers[i].get():
+                        EX_examQuestions[EX_exam_currentQuestion][8].append(i)
+
+        def EX_checkAnswer():
+            checkArray = []
+            maxPoints = EX_examQuestions[EX_exam_currentQuestion][1]
+            points = 0.0
+            for answer in EX_examQuestions[EX_exam_currentQuestion][8]:
+                checkArray.append(EX_examQuestions[EX_exam_currentQuestion][5][answer][0])
+            checkArray.sort()
+            if EX_examQuestions[EX_exam_currentQuestion][4] == checkArray:
+                   EX_exam_study_tkSVar.set("Correct\n" + str(maxPoints) + " out of " + str(maxPoints) + " points")
+                   EX_exam_study_lbl.config(fg="#00af00")
+            else:
+                if EX_examQuestions[EX_exam_currentQuestion][3]:
+                    for answer in checkArray:
+                        if answer in EX_examQuestions[EX_exam_currentQuestion][4]:
+                            points += 1/len(EX_examQuestions[EX_exam_currentQuestion][4])
+                        else:
+                            points -= 1/len(EX_examQuestions[EX_exam_currentQuestion][4])
+                    if points < 0:
+                        points = 0.0
+                EX_exam_study_tkSVar.set("Incorrect\n" + str(points) + " out of " + str(maxPoints) + " points")
+                EX_exam_study_lbl.config(fg="#ff0000")
+            if self.examOptions[8].get():
+                targetList = []
+                for correctAnswer in EX_examQuestions[EX_exam_currentQuestion][4]:
+                    for i in range(0, len(EX_examQuestions[EX_exam_currentQuestion][5])):
+                        if correctAnswer == EX_examQuestions[EX_exam_currentQuestion][5][i][0]:
+                            targetList.append(i)
+                            break
+                for location in targetList:
+                    EX_exam_question_widgetArray[location][2].config(bg="#00ff00")
+
+        def EX_startExam():
+            nonlocal EX_examQuestions
+            nonlocal EX_reviewFlag
+            nonlocal EX_exam_currentQuestion
+            nonlocal EX_startTime
+            nonlocal EX_exam_remainingExamTime
+            EX_window_tL.geometry("300x415")
+            EX_reviewFlag = False
+            EX_exam_currentQuestion = 0
+            EX_exam_buttons_previous_btn.config(state="disabled")
+            EX_examQuestions = copy.deepcopy(self.questionBank)
+            for question in EX_examQuestions:
+                question.append([])
+            if self.examOptions[0].get():
+                random.shuffle(EX_examQuestions)
+            if self.examOptions[1].get():
+                for question in EX_examQuestions:
+                    random.shuffle(question[5])
+            EX_exam_buttons_next_btn.config(state="normal")
+            if len(EX_examQuestions) > 1:
+                EX_exam_buttons_next_btn.grid()
+                EX_exam_buttons_finish_btn.grid_remove()
+            else:
+                EX_exam_buttons_next_btn.grid_remove()
+                EX_exam_buttons_finish_btn.grid()
+            EX_startTime = int(time.time())
+            if self.examOptions[2].get():
+                EX_exam_remainingExamTime = (self.EO_examTime_tkIVar.get() * 60) + 1
+                EX_cycleExamCountdown()
+            EX_exam_frm.grid()
+            EX_results_frm.grid_remove()
+
+            EX_exam_buttons_previous_btn.grid()
+            EX_exam_buttons_check_btn.grid()
+            EX_exam_buttons_next_btn.grid()
+            EX_exam_buttons_finish_btn.grid()
+            EX_exam_buttons_finish_btn.grid_remove()
+            EX_exam_buttons_results_btn.grid_remove()
+
+            EX_updateDisplay()
+
+        def EX_reviewExam():
+            nonlocal EX_exam_currentQuestion
+            EX_window_tL.geometry("300x415")
+            EX_exam_currentQuestion = 0
+            EX_exam_buttons_previous_btn.config(state="disabled")
+            if len(EX_examQuestions) > 1:
+                EX_exam_buttons_next_btn.grid()
+                EX_exam_buttons_finish_btn.grid_remove()
+            else:
+                EX_exam_buttons_next_btn.grid_remove()
+                EX_exam_buttons_finish_btn.grid()
+            EX_exam_frm.grid()
+            EX_results_frm.grid_remove()
+
+            EX_exam_buttons_previous_btn.grid()
+            EX_exam_buttons_results_btn.grid()
+            EX_exam_buttons_next_btn.grid()
+            EX_exam_buttons_finish_btn.grid_remove()
+
+            EX_updateDisplay()
+
+        def EX_cycleExamCountdown():
+            nonlocal EX_exam_remainingExamTime
+            EX_exam_remainingExamTime -= 1
+            minute = EX_exam_remainingExamTime // 60
+            second = EX_exam_remainingExamTime % 60
+            if self.examOptions[4].get():
+                EX_exam_remainingExamTime_tkSVar.set("Exam time remaining: " + str(minute) + ":" + format(second, "02d"))
+            else:
+                EX_exam_remainingExamTime_tkSVar.set("Exam time remaining: ?")
+            if EX_exam_remainingExamTime > 0:
+                self.EX_cycleTask[0] = EX_window_tL.after(1000, EX_cycleExamCountdown)
+            else:
+                EX_finishExam(False)
+
+        def EX_cycleQuestionCountdown():
+            nonlocal EX_exam_currentQuestion
+            nonlocal EX_exam_remainingQuestionTime
+            EX_exam_remainingQuestionTime -= 1
+            minute = EX_exam_remainingQuestionTime // 60
+            second = EX_exam_remainingQuestionTime % 60
+            if self.examOptions[4].get():
+                EX_exam_remainingQuestionTime_tkSVar.set("Question time remaining: " + str(minute) + ":" + format(second, "02d"))
+            else:
+                EX_exam_remainingQuestionTime_tkSVar.set("Question time remaining: ?")
+            if EX_exam_remainingQuestionTime > 0:
+                self.EX_cycleTask[1] = EX_window_tL.after(1000, EX_cycleQuestionCountdown)
+            else:
+                if EX_exam_currentQuestion < len(EX_examQuestions) - 1:
+                    EX_changeQuestion(2)
+                else:
+                    EX_finishExam(False)
+
+        EX_examQuestions = []
+        EX_startTime = 0
+        EX_endTime = 0
+        self.EX_cycleTask = [None, None]
+        EX_reviewFlag = False
+        EX_window_tL = tkinter.Toplevel()
+        EX_window_tL.title("Exam")
+        EX_window_tL.resizable(width=False, height=False)
+        EX_window_tL.columnconfigure(0, weight=1)
+
+        EX_exam_currentQuestion = 0
+        EX_exam_remainingExamTime = 0
+        EX_exam_remainingExamTime_tkSVar = tkinter.StringVar(value="Exam time remaining: No time limit")
+        EX_exam_remainingQuestionTime = 0
+        EX_exam_remainingQuestionTime_tkSVar = tkinter.StringVar(value="Question time remaining: No time limit")
+        EX_exam_questionVar_tkSVar = tkinter.StringVar(value="")
+        EX_exam_question_widgetArray = []
+        self.EX_exam_singleAnswer_tkIVar = tkinter.IntVar(value=None)
+        EX_exam_study_tkSVar = tkinter.StringVar(value="")
+        EX_exam_multiAnswers = []
+        EX_exam_choiceArray = []
+
+        EX_exam_frm = tkinter.Frame(EX_window_tL)
+        EX_exam_frm.columnconfigure(0, weight=1)
+
+        EX_exam_time_frm = tkinter.Frame(EX_exam_frm)
+        EX_exam_time_exam_lbl = tkinter.Label(EX_exam_time_frm, textvariable=EX_exam_remainingExamTime_tkSVar, anchor="w")
+        EX_exam_time_question_lbl = tkinter.Label(EX_exam_time_frm, textvariable=EX_exam_remainingQuestionTime_tkSVar, anchor="w")
+        EX_exam_question_frm = tkinter.Frame(EX_exam_frm)
+        EX_exam_question_frm.columnconfigure(0, weight=1)
+        EX_exam_question_frm.columnconfigure(1, weight=1000)
+        EX_exam_question_lbl = tkinter.Label(EX_exam_question_frm, height=4, textvariable=EX_exam_questionVar_tkSVar, anchor="w", justify="left", wraplength=280)
+
+        for i in range(0,5):
+            EX_exam_multiAnswers.append(tkinter.BooleanVar(value=False))
+            EX_exam_choiceArray.append(tkinter.StringVar(value=""))
+            EX_exam_question_widgetArray.append([])
+            EX_exam_question_widgetArray[i].append(tkinter.Radiobutton(EX_exam_question_frm, variable=self.EX_exam_singleAnswer_tkIVar, value=i, command=EX_selectAnswer, state="disabled"))
+            EX_exam_question_widgetArray[i].append(tkinter.Checkbutton(EX_exam_question_frm, variable=EX_exam_multiAnswers[i], command=EX_selectAnswer, state="disabled"))
+            EX_exam_question_widgetArray[i].append(tkinter.Label(EX_exam_question_frm, height=2, textvariable=EX_exam_choiceArray[i], state="disabled", anchor="w"))
+            EX_exam_question_widgetArray[i][0].grid(row=i+1, column=0, sticky="w", padx=5)
+            EX_exam_question_widgetArray[i][1].grid(row=i+1, column=0, sticky="w", padx=5)
+            EX_exam_question_widgetArray[i][1].grid_remove()
+            EX_exam_question_widgetArray[i][2].grid(row=i+1, column=1, sticky="ew", padx=(0,5), pady=(0,5))
+        EX_exam_study_lbl = tkinter.Label(EX_exam_frm, height=2, textvariable=EX_exam_study_tkSVar)
+        EX_exam_buttons_frm = tkinter.Frame(EX_exam_frm)
+        EX_exam_buttons_frm.columnconfigure(0, weight=1)
+        EX_exam_buttons_frm.columnconfigure(1, weight=1)
+        EX_exam_buttons_frm.columnconfigure(2, weight=1)
+        EX_exam_buttons_previous_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Previous\nQuestion", command=functools.partial(EX_changeQuestion, 0), state="disabled")
+        EX_exam_buttons_check_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Check\nAnswer", command=EX_checkAnswer, state="disabled")
+        EX_exam_buttons_results_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Exam\nResults", command=EX_examResults)
+        EX_exam_buttons_next_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Next\nQuestion", command=functools.partial(EX_changeQuestion, 1))
+        EX_exam_buttons_finish_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Finish\nExam", command=functools.partial(EX_finishExam, True))
+
+        EX_results_correctAnswerRatio_tkSVar = tkinter.StringVar(value="")
+        EX_results_pointsRatio_tkSVar = tkinter.StringVar(value="")
+        EX_results_score_tkSVar = tkinter.StringVar(value="")
+        EX_results_time_tkSVar = tkinter.StringVar(value="")
+
+        EX_results_frm = tkinter.Frame(EX_window_tL)
+        EX_results_stats_frm = tkinter.Frame(EX_results_frm)
+        EX_results_buttons_frm = tkinter.Frame(EX_results_frm)
+        EX_results_buttons_frm.columnconfigure(0, weight=1)
+        EX_results_buttons_frm.columnconfigure(1, weight=1)
+        EX_results_buttons_frm.columnconfigure(2, weight=1)
+
+        EX_results_stats_correctAnswerRatio_lbl = tkinter.Label(EX_results_stats_frm, textvariable=EX_results_correctAnswerRatio_tkSVar, anchor="w")
+        EX_results_stats_pointsRatio_lbl = tkinter.Label(EX_results_stats_frm, textvariable=EX_results_pointsRatio_tkSVar, anchor="w")
+        EX_results_stats_score_lbl = tkinter.Label(EX_results_stats_frm, textvariable=EX_results_score_tkSVar, anchor="w")
+        EX_results_stats_time_lbl = tkinter.Label(EX_results_stats_frm, textvariable=EX_results_time_tkSVar, anchor="w")
+
+        EX_results_buttons_restart_btn = tkinter.Button(EX_results_buttons_frm, height=2, text="Restart\nExam", command=EX_startExam)
+        EX_results_buttons_review_btn = tkinter.Button(EX_results_buttons_frm, height=2, text="Review\nQuestions", command=EX_reviewExam)
+        EX_results_buttons_exit_btn = tkinter.Button(EX_results_buttons_frm, height=2, text="Exit\nExam", command=EX_exit)
+
+        EX_results_frm.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        EX_results_frm.columnconfigure(0, weight=1)
+        EX_results_frm.grid_remove()
+        EX_results_stats_frm.grid(row=0, column=0)
+        EX_results_buttons_frm.grid(row=1, column=0, sticky="ew", pady=5)
+        
+        EX_results_stats_correctAnswerRatio_lbl.grid(row=0, column=0)
+        EX_results_stats_pointsRatio_lbl.grid(row=1, column=0)
+        EX_results_stats_score_lbl.grid(row=2, column=0)
+        EX_results_stats_time_lbl.grid(row=3, column=0)
+        
+        EX_results_buttons_restart_btn.grid(row=0, column=0, sticky="ew")
+        EX_results_buttons_review_btn.grid(row=0, column=1, sticky="ew", padx=5)
+        EX_results_buttons_exit_btn.grid(row=0, column=2, sticky="ew")
+
+        EX_exam_frm.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        EX_exam_frm.grid_remove()
+ 
+        EX_exam_time_frm.grid(row=0, column=0, sticky="ew")
+        EX_exam_time_exam_lbl.grid(row=0, column=0, sticky="ew")
+        EX_exam_time_question_lbl.grid(row=1, column=0, sticky="ew")
+        EX_exam_question_frm.grid(row=1, column=0, sticky="ew")
+        EX_exam_question_lbl.grid(row=0, column=0, columnspan=2, sticky="ew", pady=5)
+        EX_exam_study_lbl.grid(row=2, column=0, sticky="ew", pady=(0,5))
+
+        EX_exam_buttons_frm.grid(row=3, column=0, sticky="ew")
+        EX_exam_buttons_previous_btn.grid(row=0, column=0, sticky="ew")
+        EX_exam_buttons_check_btn.grid(row=0, column=1, sticky="ew", padx=5)
+        EX_exam_buttons_results_btn.grid(row=0, column=1, sticky="ew", padx=5)
+        EX_exam_buttons_results_btn.grid_remove()
+        EX_exam_buttons_next_btn.grid(row=0, column=2, sticky="ew")
+        EX_exam_buttons_finish_btn.grid(row=0, column=2, sticky="ew")
+        EX_exam_buttons_finish_btn.grid_remove()
+
+        if self.examOptions[7].get():
+            EX_exam_buttons_check_btn.config(state="normal")
+
+        EX_startExam()
 
     def exitProgram(self):
         self.window_tk.destroy()

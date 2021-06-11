@@ -1,14 +1,14 @@
 import sys
-try:
-    import gui
-    import msgBank
-except Exception:
-    print("Error importing modules.\nPlease check that the following modules are located in the same directory as startup:\n\n"\
-        "-> gui\n" \
-        "-> msgBank\n" \
-        "Press Enter to exit")
-    input()
-    exit()
+# try:
+import gui
+import msgBank
+# except Exception:
+#     print("Error importing modules.\nPlease check that the following modules are located in the same directory as startup:\n\n"\
+#         "-> gui\n" \
+#         "-> msgBank\n" \
+#         "Press Enter to exit")
+#     input()
+#     exit()
 print("\nPython version " + str(sys.version) + "\n")
 versionNum = float(sys.version[0:3])
 if versionNum < 3.6:

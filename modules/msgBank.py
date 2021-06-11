@@ -48,6 +48,13 @@ def display(messageID, parentContainer):
             title = "Save Complete"
             message = "Question configuration saved successfully."
 
+    # Exam messages
+    elif 200 <= messageID <= 299:
+        if messageID == 200:
+            winType = 3
+            title = "Warning"
+            message = "No answers have been selected. You will be unable to return to this question later.\n\nContinue to next question?"
+
     if winType == 3:
         return returnFeedback(winType, title, message, parentContainer)
     else:
