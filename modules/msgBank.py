@@ -1,11 +1,21 @@
+# Written by JohnnyJoPo -- https://github.com/JohnnyJoPo
+# On behalf of: N/A (personal hobby project)
+# June 30, 2021
+
+# msgBank.py is opened from startup.py and gui.py to provide message output
+# based on an input number (the messageID)
+
+# Import Python Standard Library modules
 import tkinter.messagebox
 
+# Takes an input ID number and the currently active container
+# and passes it to the returnFeedback function
 def display(messageID, parentContainer):
     winType = 0
     title = ""
     message = ""
 
-    # WinTypes
+    # Window Types
     # 0 Info box
     # 1 Warning
     # 2 Error
@@ -60,7 +70,7 @@ def display(messageID, parentContainer):
     else:
         returnFeedback(winType, title, message, parentContainer)
 
-## Takes input message and displays it via messagebox
+# Takes input message and displays it via messagebox
 def returnFeedback(winType, title, message, parentContainer):
     if winType == 0:
         tkinter.messagebox.showinfo(title, message, parent=parentContainer)

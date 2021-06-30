@@ -1,5 +1,12 @@
+# Written by JohnnyJoPo -- https://github.com/JohnnyJoPo
+# On behalf of: N/A (personal hobby project)
+# June 30, 2021
+
+# gui.py is the primary module that provides all of the functionality needed for
+# the exam practice application
+
+# Import Python Standard Library modules
 import os
-import sys
 import re
 import tkinter
 import tkinter.ttk
@@ -9,9 +16,14 @@ import time
 import random
 import copy
 
+# Import application modules
 import msgBank as m
 
+# Application object
 class interface:
+
+    # Initialization function that creates the main menu GUI
+    # and global variables that can be accessed anywhere in the application
     def __init__(self):
         self.window_tk = tkinter.Tk()
         self.window_tk.title("Exam Practice v1.0")
@@ -38,7 +50,13 @@ class interface:
             self.examOptions.append(tkinter.BooleanVar(value=False))
         tkinter.mainloop()
 
+    # Creates the GUI used for the question manager
+    # All subfunctions are labeled with QM
+    # The question manager allows you to enter question data
+    # to be used in the exam (question, choices, point value, etc)
     def openQuestionManager(self):
+
+        # Updates the question selection dropdown menu whenever the question changes
         def QM_updateQuestionDisplayList(event=None):
             question = QM_question_input_txt.get("1.0","end-1c")
             selectedIndex = QM_qBank_question_comBx.current()
@@ -71,6 +89,8 @@ class interface:
                 QM_qBank_question_comBx.current(selectedIndex)
             QM_enableChoices()
 
+        # Updates the questionBank array whenever a question's data changes
+        # Called from multiple points in the question manager
         def QM_insertData(event=None):
             selectedIndex = QM_qBank_question_comBx.current()
             self.questionBank[selectedIndex][1] = QM_points_tkSVar.get()
@@ -89,6 +109,9 @@ class interface:
             QM_checkValidity(0, None)
             QM_enableExam()
 
+        # Checks the validity of the selected question in its current configuration
+        # If the check fails, it sets a flag for the question that prevents it from appearing in the exam
+        # Called from multiple points in the question manager (typically whenever question data is modified)
         def QM_checkValidity(mode, checkIndex):
             valid = True
             if mode == 0:
@@ -121,6 +144,8 @@ class interface:
                     QM_error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
                         "Please check that all fields are filled out with proper values.")
 
+        # Populates the question manager widgets with data based on the question selected from
+        # the dropdown menu
         def QM_updateForm(event=None):
             selectedIndex = QM_qBank_question_comBx.current()
             QM_question_input_txt.delete("1.0",tkinter.END)
@@ -167,6 +192,8 @@ class interface:
                     QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
             QM_enableChoices()
 
+        # Checks the questionBank array for any valid questions that can appear in the exam
+        # If at least one valid question is found, the "Begin Exam" button on the main menu GUI is enabled
         def QM_enableExam():
             self.start_btn.config(state="disabled")
             if self.questionBank:
@@ -175,6 +202,8 @@ class interface:
                         self.start_btn.config(state="normal")
                         return
 
+        # If a new question is created, all of the question manager widgets are enabled to allow data input
+        # If all questions are cleared, all widgets are cleared and disabled
         def QM_enableChoices():
             QM_enableExam()
             selectedIndex = QM_qBank_question_comBx.current()
@@ -254,6 +283,7 @@ class interface:
                         QM_answers_widgetArray[i][2].unbind("<KeyRelease>")
                 QM_insertData()
 
+        # Removes the currently selected question from the dropdown menu
         def QM_clear():
             selectedIndex = QM_qBank_question_comBx.current()
             self.questionBank.pop(selectedIndex)
@@ -262,6 +292,7 @@ class interface:
             QM_qBank_question_comBx.current(0)
             QM_updateForm()
 
+        # Removes all questions from the dropdown menu
         def QM_clearAll():
             if len(QM_questionDisplayList) > 1:
                 self.questionBank.clear()
@@ -271,6 +302,7 @@ class interface:
                 QM_qBank_question_comBx.current(0)
                 QM_updateForm()
 
+        # Adds the entered tag to the selected question
         def QM_addTag():
             if not bool(re.match("^[a-zA-Z0-9_]+$", QM_tag_tkSVar.get().strip())):
                 m.display(100, QM_window_tL) # No valid tag entered
@@ -283,6 +315,7 @@ class interface:
                 m.display(101, QM_window_tL) # Tag already added
                 return
  
+        # Removes the selected tag from the selected question
         def QM_removeTag():
             selectedIndex = QM_qBank_question_comBx.current()
             selectedTagIndex = QM_tags_tagList_comBx.current()
@@ -293,10 +326,14 @@ class interface:
             QM_tags_tagList_comBx.config(values=QM_tags_tagList)
             QM_enableChoices()
 
+        # Removes all tags from the selected question
         def QM_removeAllTags():
             QM_tags_tagList.clear()
             QM_enableChoices()
 
+        # Loads question data from an input file
+        # If validation passes, the questionBank array is cleared and
+        # reset using the input data from the file
         def QM_load():
             inFilePath = tkinter.filedialog.askopenfilename(\
                 parent=QM_window_tL,
@@ -384,7 +421,8 @@ class interface:
                 m.display(104, QM_window_tL) # Questions QM_load warning
             else:
                 m.display(105, QM_window_tL) # Questions QM_loaded successfully
-   
+
+        # Takes all data from the questionBank array and outputs it to a text file
         def QM_save():
             outFilePath = tkinter.filedialog.asksaveasfilename(\
                 parent=QM_window_tL,\
@@ -557,7 +595,12 @@ class interface:
         QM_window_tL.focus_set()
         QM_window_tL.grab_set()
 
+    # Creates the GUI used for the exam options
+    # All subfunctions are labeled with EO
+    # Exam options affect various behaviors and functionality of the exam
     def openOptionWindow(self):
+
+        # Updates the global examOptions array whenever a change is made
         def EO_updateOptions():
             if not self.examOptions[2].get() and not self.examOptions[3].get(): # If both exam and question time limits are disabled
                 self.examOptions[4].set(False)
@@ -623,10 +666,15 @@ class interface:
         EO_window_tL.grab_set()
         EO_updateOptions()
 
+    # Creates the GUI used for the exam
     def startExam(self):
+
+        # Destroys the exam GUI window
         def EX_exit():
             EX_window_tL.destroy()
 
+        # Performs calculations based on the chosen answers throughout the exam
+        # Normally called when moving past the last question
         def EX_finishExam(check):
             if check:
                 nonlocal EX_exam_currentQuestion
@@ -641,8 +689,7 @@ class interface:
                 if self.EX_cycleTask[i] != None:
                     EX_window_tL.after_cancel(self.EX_cycleTask[i])
                     self.EX_cycleTask[i] = None
-            EX_exam_frm.grid_remove()
-            EX_results_frm.grid()
+            EX_examResults()
             examLength = len(EX_examQuestions)
             correctAnswers = 0
             maxPoints = 0.0
@@ -694,10 +741,14 @@ class interface:
                 outString = inArray[0].ljust(20) + "     " + format(float(inArray[1]), ".2f") + " / " + format(float(inArray[2]), ".2f") + \
                     "     " + format(float((inArray[1]/inArray[2])*100), ".2f") + "%"
                 EX_results_tags_lbx.insert("end", outString)
+        
+        # Clears the exam window of exam widgets and shows the results of the exam
         def EX_examResults():
             EX_exam_frm.grid_remove()
             EX_results_frm.grid()
 
+        # Changes the current question in the exam
+        # Called from clicking the "Previous Question" or "Next Question" buttons
         def EX_changeQuestion(direction):
             nonlocal EX_exam_currentQuestion
             if direction == 0:
@@ -726,6 +777,8 @@ class interface:
                 EX_exam_currentQuestion += 1
             EX_updateDisplay()
 
+        # Updates the exam GUI with data from the next/previous question
+        # Called at the end of EX_changeQuestion
         def EX_updateDisplay():
             nonlocal EX_exam_currentQuestion
             nonlocal EX_exam_remainingQuestionTime
@@ -788,6 +841,7 @@ class interface:
             elif EX_reviewFlag:
                 EX_checkAnswer()
 
+        # Updates a value in the EX_examQuestions array whenever an answer is selected
         def EX_selectAnswer():
             EX_examQuestions[EX_exam_currentQuestion][8].clear()
             EX_exam_study_tkSVar.set("")
@@ -798,6 +852,9 @@ class interface:
                     if EX_exam_multiAnswers[i].get():
                         EX_examQuestions[EX_exam_currentQuestion][8].append(i)
 
+        # Displays whether an answer is correct or incorrect
+        # Called from the "Check Answer" button, or automatically when
+        # navigating the exam in review mode
         def EX_checkAnswer():
             checkArray = []
             maxPoints = EX_examQuestions[EX_exam_currentQuestion][1]
@@ -829,6 +886,8 @@ class interface:
                 for location in targetList:
                     EX_exam_question_widgetArray[location][2].config(bg="#00ff00")
 
+        # Starting function that sets all the exam widgets and loads the first question
+        # Called immediately when the exam GUI is created
         def EX_startExam():
             nonlocal EX_examQuestions
             nonlocal EX_examTags
@@ -875,6 +934,8 @@ class interface:
 
             EX_updateDisplay()
 
+        # Clears the exam GUI of results widgets and sets the exam widgets back in place
+        # so that the exam can be navigated through in a read-only mode
         def EX_reviewExam():
             nonlocal EX_exam_currentQuestion
             EX_exam_currentQuestion = 0
@@ -895,6 +956,8 @@ class interface:
 
             EX_updateDisplay()
 
+        # Countdown function that cycles once every second if the exam time limit is enabled
+        # Automatically calls EX_finishExam when the timer reaches 0
         def EX_cycleExamCountdown():
             nonlocal EX_exam_remainingExamTime
             EX_exam_remainingExamTime -= 1
@@ -909,6 +972,8 @@ class interface:
             else:
                 EX_finishExam(False)
 
+        # Countdown function that cycles once every second if question time limits are enabled and set
+        # Automatically progresses to the next question when the timer reaches 0
         def EX_cycleQuestionCountdown():
             nonlocal EX_exam_currentQuestion
             nonlocal EX_exam_remainingQuestionTime
@@ -927,6 +992,8 @@ class interface:
                 else:
                     EX_finishExam(False)
 
+        # Binds click events to the label widgets
+        # When a label is clicked, its associated radio button or checkbox is selected
         def EX_bindEvent(i, event=None):
             nonlocal EX_examQuestions
             nonlocal EX_exam_question_widgetArray
@@ -1066,8 +1133,10 @@ class interface:
 
         EX_startExam()
 
+    # Destroys the GUI for the main menu, effectivelly terminating the applicaiton
     def exitProgram(self):
         self.window_tk.destroy()
 
+# Creates an interface object to start the program
 def start():
     _ = interface()
