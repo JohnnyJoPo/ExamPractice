@@ -462,7 +462,7 @@ class interface:
         QM_error_lbl.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,0))
 
         QM_question_frm = tkinter.LabelFrame(QM_window_tL, text="Question")
-        QM_question_input_txt = tkinter.Text(QM_question_frm, height=3)
+        QM_question_input_txt = tkinter.Text(QM_question_frm, height=3, wrap="word")
         QM_question_input_yScb = tkinter.Scrollbar(QM_question_frm, orient=tkinter.VERTICAL, command=QM_question_input_txt.yview)
         QM_question_input_txt.config(yscrollcommand=QM_question_input_yScb.set)
         QM_question_input_txt.bind("<KeyRelease>", QM_updateQuestionDisplayList)
@@ -510,7 +510,7 @@ class interface:
             QM_answers_multiChoiceArray.append(tkinter.BooleanVar(value=False))
             QM_answers_widgetArray[i].append(tkinter.Radiobutton(QM_answers_frm, variable=self.QM_answers_singleChoice_tkIVar, value=i, command=QM_insertData, state="disabled"))
             QM_answers_widgetArray[i].append(tkinter.Checkbutton(QM_answers_frm, variable=QM_answers_multiChoiceArray[i], command=QM_insertData, state="disabled"))
-            QM_answers_widgetArray[i].append(tkinter.Text(QM_answers_frm, height=2, state="disabled", bg="#dfdfdf"))
+            QM_answers_widgetArray[i].append(tkinter.Text(QM_answers_frm, height=2, state="disabled", bg="#dfdfdf", wrap="word"))
             QM_answers_widgetArray[i][0].grid(row=i, column=0, padx=5)
             QM_answers_widgetArray[i][1].grid(row=i, column=0, padx=5)
             QM_answers_widgetArray[i][1].grid_remove()
@@ -633,9 +633,9 @@ class interface:
                 if not EX_examQuestions[EX_exam_currentQuestion][8]:
                     if not m.display(200, EX_window_tL): # No answer selected; Confirm continuing to next question
                         return
+            nonlocal EX_examTags
             nonlocal EX_reviewFlag
             nonlocal EX_endTime
-            EX_window_tL.geometry("300x140")
             EX_reviewFlag = True
             for i in range(0,1):
                 if self.EX_cycleTask[i] != None:
@@ -661,9 +661,14 @@ class interface:
                 if question[4] == checkArray:
                     correctAnswers += 1
                     points += question[1]
+                    for tag in question[6]:
+                        for targetTag in EX_examTags:
+                            if tag == targetTag[0]:
+                                targetTag[1] += question[1]
+                                targetTag[2] += question[1]
                 else:
+                    partialCredit = 0
                     if question[3]:
-                        partialCredit = 0
                         for answer in checkArray:
                             if answer in question[4]:
                                 partialCredit += 1/len(question[4])
@@ -672,15 +677,24 @@ class interface:
                         if partialCredit < 0:
                             partialCredit = 0.0
                         points += partialCredit
+                    for tag in question[6]:
+                        for targetTag in EX_examTags:
+                            if tag == targetTag[0]:
+                                targetTag[1] += partialCredit
+                                targetTag[2] += question[1]
+
             score = (points / maxPoints) * 100
 
             EX_results_correctAnswerRatio_tkSVar.set("Correct answers: " + str(correctAnswers) + " out of " + str(examLength))
             EX_results_pointsRatio_tkSVar.set("Points earned: " + format(float(points), ".2f") + " out of " + format(float(maxPoints), ".2f"))
             EX_results_score_tkSVar.set("Exam score: " + format(float(score), ".2f") + "%")
             EX_results_time_tkSVar.set("Time used: " + str(minutes) + ":" + format(seconds, "02d"))
-
+            EX_results_tags_lbx.delete(0, "end")
+            for inArray in EX_examTags:
+                outString = inArray[0].ljust(20) + "     " + format(float(inArray[1]), ".2f") + " / " + format(float(inArray[2]), ".2f") + \
+                    "     " + format(float((inArray[1]/inArray[2])*100), ".2f") + "%"
+                EX_results_tags_lbx.insert("end", outString)
         def EX_examResults():
-            EX_window_tL.geometry("300x140")
             EX_exam_frm.grid_remove()
             EX_results_frm.grid()
 
@@ -817,17 +831,22 @@ class interface:
 
         def EX_startExam():
             nonlocal EX_examQuestions
+            nonlocal EX_examTags
+            nonlocal EX_tagsCheck
             nonlocal EX_reviewFlag
             nonlocal EX_exam_currentQuestion
             nonlocal EX_startTime
             nonlocal EX_exam_remainingExamTime
-            EX_window_tL.geometry("300x415")
             EX_reviewFlag = False
             EX_exam_currentQuestion = 0
             EX_exam_buttons_previous_btn.config(state="disabled")
             EX_examQuestions = copy.deepcopy(self.questionBank)
             for question in EX_examQuestions:
                 question.append([])
+                for tag in question[6]:
+                    if tag.lower() not in EX_tagsCheck:
+                        EX_examTags.append([tag, 0, 0])
+                        EX_tagsCheck.append(tag.lower())
             if self.examOptions[0].get():
                 random.shuffle(EX_examQuestions)
             if self.examOptions[1].get():
@@ -858,7 +877,6 @@ class interface:
 
         def EX_reviewExam():
             nonlocal EX_exam_currentQuestion
-            EX_window_tL.geometry("300x415")
             EX_exam_currentQuestion = 0
             EX_exam_buttons_previous_btn.config(state="disabled")
             if len(EX_examQuestions) > 1:
@@ -909,7 +927,18 @@ class interface:
                 else:
                     EX_finishExam(False)
 
+        def EX_bindEvent(i, event=None):
+            nonlocal EX_examQuestions
+            nonlocal EX_exam_question_widgetArray
+            if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+                EX_exam_question_widgetArray[i][0].select()
+            else:
+                EX_exam_question_widgetArray[i][1].toggle()
+            EX_selectAnswer()
+
         EX_examQuestions = []
+        EX_examTags = []
+        EX_tagsCheck = []
         EX_startTime = 0
         EX_endTime = 0
         self.EX_cycleTask = [None, None]
@@ -940,7 +969,7 @@ class interface:
         EX_exam_question_frm = tkinter.Frame(EX_exam_frm)
         EX_exam_question_frm.columnconfigure(0, weight=1)
         EX_exam_question_frm.columnconfigure(1, weight=1000)
-        EX_exam_question_lbl = tkinter.Label(EX_exam_question_frm, height=4, textvariable=EX_exam_questionVar_tkSVar, anchor="w", justify="left", wraplength=280)
+        EX_exam_question_lbl = tkinter.Label(EX_exam_question_frm, textvariable=EX_exam_questionVar_tkSVar, anchor="w", justify="left", wraplength=440)
 
         for i in range(0,5):
             EX_exam_multiAnswers.append(tkinter.BooleanVar(value=False))
@@ -948,21 +977,22 @@ class interface:
             EX_exam_question_widgetArray.append([])
             EX_exam_question_widgetArray[i].append(tkinter.Radiobutton(EX_exam_question_frm, variable=self.EX_exam_singleAnswer_tkIVar, value=i, command=EX_selectAnswer, state="disabled"))
             EX_exam_question_widgetArray[i].append(tkinter.Checkbutton(EX_exam_question_frm, variable=EX_exam_multiAnswers[i], command=EX_selectAnswer, state="disabled"))
-            EX_exam_question_widgetArray[i].append(tkinter.Label(EX_exam_question_frm, height=2, textvariable=EX_exam_choiceArray[i], state="disabled", anchor="w"))
+            EX_exam_question_widgetArray[i].append(tkinter.Label(EX_exam_question_frm, textvariable=EX_exam_choiceArray[i], state="disabled", anchor="w", justify="left", wraplength=400))
             EX_exam_question_widgetArray[i][0].grid(row=i+1, column=0, sticky="w", padx=5)
             EX_exam_question_widgetArray[i][1].grid(row=i+1, column=0, sticky="w", padx=5)
             EX_exam_question_widgetArray[i][1].grid_remove()
             EX_exam_question_widgetArray[i][2].grid(row=i+1, column=1, sticky="ew", padx=(0,5), pady=(0,5))
-        EX_exam_study_lbl = tkinter.Label(EX_exam_frm, height=2, textvariable=EX_exam_study_tkSVar)
+            EX_exam_question_widgetArray[i][2].bind("<Button-1>", functools.partial(EX_bindEvent, i))
+        EX_exam_study_lbl = tkinter.Label(EX_exam_frm, textvariable=EX_exam_study_tkSVar)
         EX_exam_buttons_frm = tkinter.Frame(EX_exam_frm)
         EX_exam_buttons_frm.columnconfigure(0, weight=1)
         EX_exam_buttons_frm.columnconfigure(1, weight=1)
         EX_exam_buttons_frm.columnconfigure(2, weight=1)
-        EX_exam_buttons_previous_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Previous\nQuestion", command=functools.partial(EX_changeQuestion, 0), state="disabled")
-        EX_exam_buttons_check_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Check\nAnswer", command=EX_checkAnswer, state="disabled")
-        EX_exam_buttons_results_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Exam\nResults", command=EX_examResults)
-        EX_exam_buttons_next_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Next\nQuestion", command=functools.partial(EX_changeQuestion, 1))
-        EX_exam_buttons_finish_btn = tkinter.Button(EX_exam_buttons_frm, height=2, text="Finish\nExam", command=functools.partial(EX_finishExam, True))
+        EX_exam_buttons_previous_btn = tkinter.Button(EX_exam_buttons_frm, width=20, height=2, text="Previous\nQuestion", command=functools.partial(EX_changeQuestion, 0), state="disabled")
+        EX_exam_buttons_check_btn = tkinter.Button(EX_exam_buttons_frm, width=20, height=2, text="Check\nAnswer", command=EX_checkAnswer, state="disabled")
+        EX_exam_buttons_results_btn = tkinter.Button(EX_exam_buttons_frm, width=20, height=2, text="Exam\nResults", command=EX_examResults)
+        EX_exam_buttons_next_btn = tkinter.Button(EX_exam_buttons_frm, width=20, height=2, text="Next\nQuestion", command=functools.partial(EX_changeQuestion, 1))
+        EX_exam_buttons_finish_btn = tkinter.Button(EX_exam_buttons_frm, width=20, height=2, text="Finish\nExam", command=functools.partial(EX_finishExam, True))
 
         EX_results_correctAnswerRatio_tkSVar = tkinter.StringVar(value="")
         EX_results_pointsRatio_tkSVar = tkinter.StringVar(value="")
@@ -971,6 +1001,8 @@ class interface:
 
         EX_results_frm = tkinter.Frame(EX_window_tL)
         EX_results_stats_frm = tkinter.Frame(EX_results_frm)
+        EX_results_tags_frm = tkinter.Frame(EX_results_frm)
+        EX_results_tags_frm.columnconfigure(0, weight=1)
         EX_results_buttons_frm = tkinter.Frame(EX_results_frm)
         EX_results_buttons_frm.columnconfigure(0, weight=1)
         EX_results_buttons_frm.columnconfigure(1, weight=1)
@@ -981,21 +1013,31 @@ class interface:
         EX_results_stats_score_lbl = tkinter.Label(EX_results_stats_frm, textvariable=EX_results_score_tkSVar, anchor="w")
         EX_results_stats_time_lbl = tkinter.Label(EX_results_stats_frm, textvariable=EX_results_time_tkSVar, anchor="w")
 
-        EX_results_buttons_restart_btn = tkinter.Button(EX_results_buttons_frm, height=2, text="Restart\nExam", command=EX_startExam)
-        EX_results_buttons_review_btn = tkinter.Button(EX_results_buttons_frm, height=2, text="Review\nQuestions", command=EX_reviewExam)
-        EX_results_buttons_exit_btn = tkinter.Button(EX_results_buttons_frm, height=2, text="Exit\nExam", command=EX_exit)
+        EX_results_tags_lbl = tkinter.Label(EX_results_tags_frm, text="Category Scores by Tag")
+        EX_results_tags_lbx = tkinter.Listbox(EX_results_tags_frm, height=5)
+        EX_results_tags_yScb = tkinter.Scrollbar(EX_results_tags_frm, orient=tkinter.VERTICAL, command=EX_results_tags_lbx.yview)
+        EX_results_tags_lbx.config(yscrollcommand=EX_results_tags_yScb.set)
+
+        EX_results_buttons_restart_btn = tkinter.Button(EX_results_buttons_frm, width=10, height=2, text="Restart\nExam", command=EX_startExam)
+        EX_results_buttons_review_btn = tkinter.Button(EX_results_buttons_frm, width=10, height=2, text="Review\nQuestions", command=EX_reviewExam)
+        EX_results_buttons_exit_btn = tkinter.Button(EX_results_buttons_frm, width=10, height=2, text="Exit\nExam", command=EX_exit)
 
         EX_results_frm.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         EX_results_frm.columnconfigure(0, weight=1)
         EX_results_frm.grid_remove()
         EX_results_stats_frm.grid(row=0, column=0)
-        EX_results_buttons_frm.grid(row=1, column=0, sticky="ew", pady=5)
+        EX_results_tags_frm.grid(row=1, column=0, sticky="ew", pady=5)
+        EX_results_buttons_frm.grid(row=2, column=0, sticky="ew", pady=5)
         
         EX_results_stats_correctAnswerRatio_lbl.grid(row=0, column=0)
         EX_results_stats_pointsRatio_lbl.grid(row=1, column=0)
         EX_results_stats_score_lbl.grid(row=2, column=0)
         EX_results_stats_time_lbl.grid(row=3, column=0)
-        
+
+        EX_results_tags_lbl.grid(row=0, column=0, sticky="ew")
+        EX_results_tags_lbx.grid(row=1, column=0, sticky="ew")
+        EX_results_tags_yScb.grid(row=1, column=1, sticky="ns")
+
         EX_results_buttons_restart_btn.grid(row=0, column=0, sticky="ew")
         EX_results_buttons_review_btn.grid(row=0, column=1, sticky="ew", padx=5)
         EX_results_buttons_exit_btn.grid(row=0, column=2, sticky="ew")
@@ -1007,7 +1049,7 @@ class interface:
         EX_exam_time_exam_lbl.grid(row=0, column=0, sticky="ew")
         EX_exam_time_question_lbl.grid(row=1, column=0, sticky="ew")
         EX_exam_question_frm.grid(row=1, column=0, sticky="ew")
-        EX_exam_question_lbl.grid(row=0, column=0, columnspan=2, sticky="ew", pady=5)
+        EX_exam_question_lbl.grid(row=0, column=0, columnspan=2, sticky="ew", pady=20)
         EX_exam_study_lbl.grid(row=2, column=0, sticky="ew", pady=(0,5))
 
         EX_exam_buttons_frm.grid(row=3, column=0, sticky="ew")
