@@ -45,9 +45,15 @@ class Interface:
 
         self.defaultColor = _dummy_lbl.cget("bg")
         self.questionBank = []
-        self.examOptions = []
-        for _ in range(0,9):
-            self.examOptions.append(tkinter.BooleanVar(value=False))
+        self.examOptions = {"questionShuffle":tkinter.BooleanVar(value=False)
+            , "choiceShuffle":tkinter.BooleanVar(value=False)
+            , "examTime":tkinter.BooleanVar(value=False)
+            , "questionTime":tkinter.BooleanVar(value=False)
+            , "displayTime":tkinter.BooleanVar(value=False)
+            , "prevQuestion":tkinter.BooleanVar(value=False)
+            , "suddenDeath":tkinter.BooleanVar(value=False)
+            , "studyMode":tkinter.BooleanVar(value=False)
+            , "showCorrect":tkinter.BooleanVar(value=False)}
         tkinter.mainloop()
 
     # Creates the GUI used for the question manager
@@ -63,7 +69,9 @@ class Interface:
             if len(QM_questionDisplayList) - 1 == selectedIndex:
                 if question.strip() != "":
                     QM_questionDisplayList.insert(selectedIndex, question.strip())
-                    self.questionBank.insert(selectedIndex, [question, 1.0, 0, 0, [0], [[0, ""], [1, ""]], [], False])
+                    self.questionBank.insert(selectedIndex, {"question":question,
+                        "points":1.0, "time":0, "qType":0, "answers":[0],
+                        "choices":[[0, ""], [1, ""]], "tags":[], "valid":False, "selections":[]})
             else:
                 if question.strip() == "":
                     QM_questionDisplayList.pop(selectedIndex)
@@ -80,7 +88,7 @@ class Interface:
                         QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
                 else:
                     QM_questionDisplayList[selectedIndex] = question.strip()
-                    self.questionBank[selectedIndex][0] = question.strip()
+                    self.questionBank[selectedIndex]["question"] = question.strip()
 
             QM_qBank_question_comBx.config(values=QM_questionDisplayList)
             if question.strip() == "":
@@ -93,19 +101,19 @@ class Interface:
         # Called from multiple points in the question manager
         def QM_insertData(event=None):
             selectedIndex = QM_qBank_question_comBx.current()
-            self.questionBank[selectedIndex][1] = QM_points_tkSVar.get()
-            self.questionBank[selectedIndex][2] = QM_time_tkSVar.get()
-            self.questionBank[selectedIndex][3] = self.QM_options_type_tkIVar.get()
-            self.questionBank[selectedIndex][4].clear()
+            self.questionBank[selectedIndex]["points"] = QM_points_tkSVar.get()
+            self.questionBank[selectedIndex]["time"] = QM_time_tkSVar.get()
+            self.questionBank[selectedIndex]["qType"] = self.QM_options_type_tkIVar.get()
+            self.questionBank[selectedIndex]["answers"].clear()
             for i in range(0,5):
                 if (self.QM_answers_singleChoice_tkIVar.get() == i and self.QM_options_type_tkIVar.get() == 0) or (QM_answers_multiChoiceArray[i].get() == True and self.QM_options_type_tkIVar.get() == 1):
-                    self.questionBank[selectedIndex][4].append(i)
-            self.questionBank[selectedIndex][5].clear()
+                    self.questionBank[selectedIndex]["answers"].append(i)
+            self.questionBank[selectedIndex]["choices"].clear()
             for i in range(0,self.QM_options_quantity_tkIVar.get()):
-                self.questionBank[selectedIndex][5].append([i, QM_answers_widgetArray[i][2].get("1.0","end-1c").strip()])
-            self.questionBank[selectedIndex][6].clear()
+                self.questionBank[selectedIndex]["choices"].append([i, QM_answers_widgetArray[i][2].get("1.0","end-1c").strip()])
+            self.questionBank[selectedIndex]["tags"].clear()
             for tag in QM_tags_tagList:
-                self.questionBank[selectedIndex][6].append(tag)
+                self.questionBank[selectedIndex]["tags"].append(tag)
             QM_checkValidity(0, None)
             QM_enableExam()
 
@@ -119,27 +127,27 @@ class Interface:
             else:
                 selectedIndex = checkIndex
             try:
-                if float(self.questionBank[selectedIndex][1]) < 0:
+                if float(self.questionBank[selectedIndex]["points"]) < 0:
                     raise ValueError
                 else:
-                    self.questionBank[selectedIndex][1] = float(self.questionBank[selectedIndex][1])
-                if isinstance(self.questionBank[selectedIndex][2], float) or int(self.questionBank[selectedIndex][2]) < 0:
+                    self.questionBank[selectedIndex]["points"] = float(self.questionBank[selectedIndex]["points"])
+                if isinstance(self.questionBank[selectedIndex]["time"], float) or int(self.questionBank[selectedIndex]["time"]) < 0:
                     raise ValueError
                 else:
-                    self.questionBank[selectedIndex][2] = int(self.questionBank[selectedIndex][2])
-                if not self.questionBank[selectedIndex][4]:
+                    self.questionBank[selectedIndex]["time"] = int(self.questionBank[selectedIndex]["time"])
+                if not self.questionBank[selectedIndex]["answers"]:
                     raise ValueError
-                for inArray in self.questionBank[selectedIndex][5]:
+                for inArray in self.questionBank[selectedIndex]["choices"]:
                     if inArray[1].strip() == "":
                         raise ValueError
             except ValueError:
                 valid = False
             if valid:
-                self.questionBank[selectedIndex][7] = True
+                self.questionBank[selectedIndex]["valid"] = True
                 if mode == 0:
                     QM_error_lbl.config(text="\n")
             else:
-                self.questionBank[selectedIndex][7] = False
+                self.questionBank[selectedIndex]["valid"] = False
                 if mode == 0:
                     QM_error_lbl.config(text="This question is not configured properly and will not appear in the exam.\n" \
                         "Please check that all fields are filled out with proper values.")
@@ -150,26 +158,26 @@ class Interface:
             selectedIndex = QM_qBank_question_comBx.current()
             QM_question_input_txt.delete("1.0",tkinter.END)
             if len(QM_questionDisplayList) - 1 > selectedIndex:
-                QM_question_input_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex][0])
-                QM_points_tkSVar.set(str(self.questionBank[selectedIndex][1]))
-                QM_time_tkSVar.set(str(self.questionBank[selectedIndex][2]))
-                self.QM_options_quantity_tkIVar.set(len(self.questionBank[selectedIndex][5]))
-                self.QM_options_type_tkIVar.set(self.questionBank[selectedIndex][3])
-                if self.questionBank[selectedIndex][3] == 0:
-                    self.QM_answers_singleChoice_tkIVar.set(self.questionBank[selectedIndex][4][0])
+                QM_question_input_txt.insert(tkinter.INSERT, self.questionBank[selectedIndex]["question"])
+                QM_points_tkSVar.set(str(self.questionBank[selectedIndex]["points"]))
+                QM_time_tkSVar.set(str(self.questionBank[selectedIndex]["time"]))
+                self.QM_options_quantity_tkIVar.set(len(self.questionBank[selectedIndex]["choices"]))
+                self.QM_options_type_tkIVar.set(self.questionBank[selectedIndex]["qType"])
+                if self.questionBank[selectedIndex]["qType"] == 0:
+                    self.QM_answers_singleChoice_tkIVar.set(self.questionBank[selectedIndex]["answers"][0])
                 else:
                     for i in range(0,5):
                         QM_answers_multiChoiceArray[i].set(0)
-                        if i in self.questionBank[selectedIndex][4]:
+                        if i in self.questionBank[selectedIndex]["answers"]:
                             QM_answers_multiChoiceArray[i].set(1)
                 for i in range(0,5):
                     QM_answers_widgetArray[i][2].delete("1.0",tkinter.END)
-                    if i < len(self.questionBank[selectedIndex][5]):
+                    if i < len(self.questionBank[selectedIndex]["choices"]):
                         QM_answers_widgetArray[i][2].config(state="normal")
-                        QM_answers_widgetArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex][5][i][1])
+                        QM_answers_widgetArray[i][2].insert(tkinter.INSERT, self.questionBank[selectedIndex]["choices"][i][1])
                 QM_tag_tkSVar.set("")
                 QM_tags_tagList.clear()
-                for tag in self.questionBank[selectedIndex][6]:
+                for tag in self.questionBank[selectedIndex]["tags"]:
                     QM_tags_tagList.append(tag)
                 if QM_tags_tagList:
                     QM_tags_tagList_comBx.config(values=QM_tags_tagList)
@@ -198,7 +206,7 @@ class Interface:
             self.start_btn.config(state="disabled")
             if self.questionBank:
                 for check in self.questionBank:
-                    if check[7]:
+                    if check["valid"]:
                         self.start_btn.config(state="normal")
                         return
 
@@ -354,63 +362,65 @@ class Interface:
                 if inString == "":
                     continue
                 if inString[:10].upper() == "QUESTION: ":
-                    self.questionBank.append([inString[10:], 1.0, 0, 0, [], [], [], False])
+                    self.questionBank.append({"question":inString[10:],
+                        "points":1.0, "time":0, "qType":0, "answers":[],
+                        "choices":[], "tags":[], "valid":False, "selections":[]})
                     QM_questionDisplayList.append(inString[10:])
                     count += 1
                 elif inString[:7].upper() == "VALUE: ":
-                    self.questionBank[count][1] = inString[7:]
+                    self.questionBank[count]["points"] = inString[7:]
                     try:
-                        if float(self.questionBank[count][1]):
+                        if float(self.questionBank[count]["points"]):
                             pass
-                        self.questionBank[count][1] = float(self.questionBank[count][1])
+                        self.questionBank[count]["points"] = float(self.questionBank[count]["points"])
                     except ValueError:
                         pass
                 elif inString[:6].upper() == "TIME: ":
-                    self.questionBank[count][2] = inString[6:]
+                    self.questionBank[count]["time"] = inString[6:]
                     try:
-                        if int(self.questionBank[count][2]):
+                        if int(self.questionBank[count]["time"]):
                             pass
-                        self.questionBank[count][2] = int(self.questionBank[count][2])
+                        self.questionBank[count]["time"] = int(self.questionBank[count]["time"])
                     except ValueError:
                         pass
                 elif inString[:14].upper() == "ANSWER-LIMIT: ":
                     if inString[14:].upper() == "MULTI":
-                        self.questionBank[count][3] = 1
+                        self.questionBank[count]["qType"] = 1
                     else:
-                        self.questionBank[count][3] = 0
+                        self.questionBank[count]["qType"] = 0
                 elif inString[:19].upper() == "CORRECT-ANSWER(S): ":
-                    self.questionBank[count][4].extend(inString[19:].split(", "))
-                    for i in range(0, len(self.questionBank[count][4])):
+                    self.questionBank[count]["answers"].extend(inString[19:].split(", "))
+                    for i in range(0, len(self.questionBank[count]["answers"])):
                         try:
-                            if int(self.questionBank[count][4][i]):
+                            if int(self.questionBank[count]["answers"][i]):
                                 pass
-                            self.questionBank[count][4][i] = int(self.questionBank[count][4][i])
+                            self.questionBank[count]["answers"][i] = int(self.questionBank[count]["answers"][i])
                         except ValueError:
                             continue
                 elif inString[:7].upper() == "CHOICE ":
                     for i in range(0,5):
                         checkString = str(i) + ": "
                         if inString[7:10] == checkString:
-                            self.questionBank[count][5].append([i, inString[10:]])
+                            self.questionBank[count]["choices"].append([i, inString[10:]])
                 elif inString[:6].upper() == "TAGS: " and inString[6:].upper() != "NONE":
-                    self.questionBank[count][6].extend(inString[6:].split(", "))
+                    self.questionBank[count]["tags"].extend(inString[6:].split(", "))
             for i in range(0, len(self.questionBank)):
-                if len(self.questionBank[i][4]) == 0:
-                    self.questionBank[i][4].append(0)
+                if len(self.questionBank[i]["answers"]) == 0:
+                    self.questionBank[i]["answers"].append(0)
                     warningMsg = True
-                if len(self.questionBank[i][5]) <= 1:
-                    self.questionBank[i][5].clear()
-                    self.questionBank[i][5].extend([[0, ""], [1, ""]])
+                if len(self.questionBank[i]["choices"]) <= 1:
+                    self.questionBank[i]["choices"].clear()
+                    self.questionBank[i]["choices"].extend([[0, ""], [1, ""]])
                     warningMsg = True
                 filteredQM_tags_tagList = []
-                for tag in self.questionBank[i][6]:
+                for tag in self.questionBank[i]["tags"]:
                     if bool(re.match("^[a-zA-Z0-9_]+$", tag)):
                         filteredQM_tags_tagList.append(tag)
                     else:
                         warningMsg = True
-                self.questionBank[i][6].clear()
+                self.questionBank[i]["tags"].clear()
                 for tag in filteredQM_tags_tagList:
-                    self.questionBank[i][6].append(tag)
+                    self.questionBank[i]["tags"].append(tag)
                 QM_checkValidity(1, i)
             inFile.close()
             QM_questionDisplayList.append("<add new question>")
@@ -434,23 +444,23 @@ class Interface:
                 return
             outString = ""
             for question in self.questionBank:
-                outString += "\nQUESTION: " + question[0].replace("\n", "\\n") + "\n" \
-                    "VALUE: " + str(question[1]) + "\n" \
-                    "TIME: " + str(question[2]) + "\n"
-                if question[3] == 0:
+                outString += "\nQUESTION: " + question["question"].replace("\n", "\\n") + "\n" \
+                    "VALUE: " + str(question["points"]) + "\n" \
+                    "TIME: " + str(question["time"]) + "\n"
+                if question["qType"] == 0:
                     outString += "ANSWER-LIMIT: SINGLE" + "\n"
                 else:
                     outString += "ANSWER-LIMIT: MULTI" + "\n"
                 outString += "CORRECT-ANSWER(S): "
-                for answer in question[4]:
+                for answer in question["answers"]:
                     outString += str(answer) + ", "
                 outString = outString.rstrip(", ")
                 outString += "\n"
-                for choice in question[5]:
-                    outString += "CHOICE " + str(choice[0]) + ": " + choice[1].replace("\n", "\\n") + "\n"
+                for choice in question["choices"]:
+                    outString += "CHOICE " + str(choice["question"]) + ": " + choice["points"].replace("\n", "\\n") + "\n"
                 outString += "TAGS: "
-                if question[6]:
-                    for tag in question[6]:
+                if question["tags"]:
+                    for tag in question["tags"]:
                         outString += tag + ", "
                     outString = outString.rstrip(", ")
                 else:
@@ -586,7 +596,7 @@ class Interface:
         if len(self.questionBank) != 0:
             QM_questionDisplayList.clear()
             for inArray in self.questionBank:
-                QM_questionDisplayList.append(inArray[0])
+                QM_questionDisplayList.append(inArray["question"])
             QM_questionDisplayList.append("<add new question>")
 
         QM_qBank_question_comBx.config(values=QM_questionDisplayList)
@@ -602,30 +612,30 @@ class Interface:
 
         # Updates the global examOptions array whenever a change is made
         def EO_updateOptions():
-            if not self.examOptions[2].get() and not self.examOptions[3].get(): # If both exam and question time limits are disabled
-                self.examOptions[4].set(False)
+            if not self.examOptions["examTime"].get() and not self.examOptions["questionTime"].get(): # If both exam and question time limits are disabled
+                self.examOptions["displayTime"].set(False)
                 EO_displayRemainingTime_chk.config(state="disabled")
             else:
                 EO_displayRemainingTime_chk.config(state="normal")
-            if self.examOptions[2].get(): # If exam time limit is enabled
+            if self.examOptions["examTime"].get(): # If exam time limit is enabled
                 EO_examTime_lbl.config(state="normal")
                 EO_examTime_spnBx.config(state="readonly")
             else:
                 EO_examTime_lbl.config(state="disabled")
                 EO_examTime_spnBx.config(state="disabled")
 
-            if self.examOptions[3].get() or self.examOptions[6].get(): # If question time limit or sudden death mode is enabled
-                self.examOptions[5].set(False)
+            if self.examOptions["questionTime"].get() or self.examOptions["suddenDeath"].get(): # If question time limit or sudden death mode is enabled
+                self.examOptions["prevQuestion"].set(False)
                 EO_enableBacktracking_chk.config(state="disabled")
             else:
                 EO_enableBacktracking_chk.config(state="normal")
-            if self.examOptions[6].get(): # If sudden death mode is enabled
-                self.examOptions[7].set(False)
+            if self.examOptions["suddenDeath"].get(): # If sudden death mode is enabled
+                self.examOptions["studyMode"].set(False)
                 EO_study_chk.config(state="disabled")
             else:
                 EO_study_chk.config(state="normal")
-            if self.examOptions[7].get(): # If study mode is enabled
-                self.examOptions[6].set(False)
+            if self.examOptions["studyMode"].get(): # If study mode is enabled
+                self.examOptions["suddenDeath"].set(False)
                 EO_suddenDeath_chk.config(state="disabled")
             else:
                 EO_suddenDeath_chk.config(state="normal")
@@ -638,17 +648,17 @@ class Interface:
         EO_window_tL.columnconfigure(1, weight=100)
 
         self.EO_examTime_tkIVar =       tkinter.IntVar(value="0")
-        EO_shuffleQuestions_chk =       tkinter.Checkbutton(EO_window_tL, text="Shuffle Exam Questions", variable=self.examOptions[0], anchor="w")
-        EO_shuffleChoices_chk =         tkinter.Checkbutton(EO_window_tL, text="Shuffle Question Choices", variable=self.examOptions[1], anchor="w")
-        EO_enableExamTime_chk =         tkinter.Checkbutton(EO_window_tL, text="Enable Exam Time Limit", variable=self.examOptions[2], command=EO_updateOptions, anchor="w")
+        EO_shuffleQuestions_chk =       tkinter.Checkbutton(EO_window_tL, text="Shuffle Exam Questions", variable=self.examOptions["questionShuffle"], anchor="w")
+        EO_shuffleChoices_chk =         tkinter.Checkbutton(EO_window_tL, text="Shuffle Question Choices", variable=self.examOptions["choiceShuffle"], anchor="w")
+        EO_enableExamTime_chk =         tkinter.Checkbutton(EO_window_tL, text="Enable Exam Time Limit", variable=self.examOptions["examTime"], command=EO_updateOptions, anchor="w")
         EO_examTime_lbl =               tkinter.Label(EO_window_tL, text="Exam Time (in minutes):", state="disabled")
         EO_examTime_spnBx =             tkinter.Spinbox(EO_window_tL, width=5, from_=1, to=180, repeatinterval=4, command=EO_updateOptions, textvariable=self.EO_examTime_tkIVar, state="disabled")
-        EO_enableQuestionTime_chk =     tkinter.Checkbutton(EO_window_tL, text="Enable Question Time Limit", variable=self.examOptions[3], command=EO_updateOptions, anchor="w")
-        EO_displayRemainingTime_chk =   tkinter.Checkbutton(EO_window_tL, text="Display Remaining Time", variable=self.examOptions[4], command=EO_updateOptions, state="disabled", anchor="w")
-        EO_enableBacktracking_chk =     tkinter.Checkbutton(EO_window_tL, text="Enable Previous Question", variable=self.examOptions[5], command=EO_updateOptions, anchor="w")
-        EO_suddenDeath_chk =            tkinter.Checkbutton(EO_window_tL, text="Sudden Death Mode", variable=self.examOptions[6], command=EO_updateOptions, anchor="w")
-        EO_study_chk =                  tkinter.Checkbutton(EO_window_tL, text="Study Mode", variable=self.examOptions[7], command=EO_updateOptions, anchor="w")
-        EO_displayCorrectChoice_chk =   tkinter.Checkbutton(EO_window_tL, text="Show Correct Answers Upon Completion", variable=self.examOptions[8], command=EO_updateOptions, anchor="w")
+        EO_enableQuestionTime_chk =     tkinter.Checkbutton(EO_window_tL, text="Enable Question Time Limit", variable=self.examOptions["questionTime"], command=EO_updateOptions, anchor="w")
+        EO_displayRemainingTime_chk =   tkinter.Checkbutton(EO_window_tL, text="Display Remaining Time", variable=self.examOptions["displayTime"], command=EO_updateOptions, state="disabled", anchor="w")
+        EO_enableBacktracking_chk =     tkinter.Checkbutton(EO_window_tL, text="Enable Previous Question", variable=self.examOptions["prevQuestion"], command=EO_updateOptions, anchor="w")
+        EO_suddenDeath_chk =            tkinter.Checkbutton(EO_window_tL, text="Sudden Death Mode", variable=self.examOptions["suddenDeath"], command=EO_updateOptions, anchor="w")
+        EO_study_chk =                  tkinter.Checkbutton(EO_window_tL, text="Study Mode", variable=self.examOptions["studyMode"], command=EO_updateOptions, anchor="w")
+        EO_displayCorrectChoice_chk =   tkinter.Checkbutton(EO_window_tL, text="Show Correct Answers Upon Completion", variable=self.examOptions["showCorrect"], command=EO_updateOptions, anchor="w")
 
         EO_shuffleQuestions_chk.grid    (column=0, row=0, columnspan=2, sticky="ew", padx=5, pady=(5,0))
         EO_shuffleChoices_chk.grid      (column=0, row=1, columnspan=2, sticky="ew", padx=5, pady=(5,0))
@@ -678,7 +688,7 @@ class Interface:
         def EX_finishExam(check):
             if check:
                 nonlocal EX_exam_currentQuestion
-                if not EX_examQuestions[EX_exam_currentQuestion][8]:
+                if not EX_examQuestions[EX_exam_currentQuestion]["selections"]:
                     if not m.display(200, EX_window_tL): # No answer selected; Confirm continuing to next question
                         return
             nonlocal EX_examTags
@@ -700,35 +710,35 @@ class Interface:
             seconds = int((EX_endTime - EX_startTime) % 60)
 
             for question in EX_examQuestions:
-                maxPoints += question[1]
+                maxPoints += question["points"]
                 checkArray = []
-                for answer in question[8]:
-                    checkArray.append(question[5][answer][0])
+                for answer in question["selections"]:
+                    checkArray.append(question["choices"][answer][0])
                 checkArray.sort()
-                if question[4] == checkArray:
+                if question["answers"] == checkArray:
                     correctAnswers += 1
-                    points += question[1]
-                    for tag in question[6]:
+                    points += question["points"]
+                    for tag in question["tags"]:
                         for targetTag in EX_examTags:
                             if tag.lower() == targetTag[0].lower():
-                                targetTag[1] += question[1]
-                                targetTag[2] += question[1]
+                                targetTag[1] += question["points"]
+                                targetTag[2] += question["points"]
                 else:
                     partialCredit = 0
-                    if question[3]:
+                    if question["qType"]:
                         for answer in checkArray:
-                            if answer in question[4]:
-                                partialCredit += question[1] * (1/len(question[4]))
+                            if answer in question["answers"]:
+                                partialCredit += question["points"] * (1/len(question["answers"]))
                             else:
-                                partialCredit -= question[1] * (1/len(question[4]))
+                                partialCredit -= question["points"] * (1/len(question["answers"]))
                         if partialCredit < 0:
                             partialCredit = 0.0
                         points += partialCredit
-                    for tag in question[6]:
+                    for tag in question["tags"]:
                         for targetTag in EX_examTags:
                             if tag.lower() == targetTag[0].lower():
                                 targetTag[1] += partialCredit
-                                targetTag[2] += question[1]
+                                targetTag[2] += question["points"]
 
             score = (points / maxPoints) * 100
 
@@ -758,20 +768,20 @@ class Interface:
                 if EX_exam_currentQuestion == 0:
                     EX_exam_buttons_previous_btn.config(state="disabled")
             else:
-                if (self.examOptions[5].get() and not self.examOptions[6].get()) or EX_reviewFlag:
+                if (self.examOptions["prevQuestion"].get() and not self.examOptions["suddenDeath"].get()) or EX_reviewFlag:
                     EX_exam_buttons_previous_btn.config(state="normal")
-                elif self.examOptions[6].get():
+                elif self.examOptions["suddenDeath"].get():
                     checkArray = []
-                    for answer in EX_examQuestions[EX_exam_currentQuestion][8]:
-                        checkArray.append(EX_examQuestions[EX_exam_currentQuestion][5][answer][0])
+                    for answer in EX_examQuestions[EX_exam_currentQuestion]["selections"]:
+                        checkArray.append(EX_examQuestions[EX_exam_currentQuestion]["choices"][answer][0])
                     checkArray.sort()
-                    if EX_examQuestions[EX_exam_currentQuestion][4] != checkArray:
+                    if EX_examQuestions[EX_exam_currentQuestion]["answers"] != checkArray:
                         EX_finishExam(False)
                 else:
-                    if not EX_examQuestions[EX_exam_currentQuestion][8] and direction == 1:
+                    if not EX_examQuestions[EX_exam_currentQuestion]["selections"] and direction == 1:
                         if not m.display(200, EX_window_tL): # No answer selected; Confirm continuing to next question
                             return
-                    elif self.examOptions[3].get() and EX_exam_currentQuestion >= len(EX_examQuestions) - 1:
+                    elif self.examOptions["questionTime"].get() and EX_exam_currentQuestion >= len(EX_examQuestions) - 1:
                         EX_finishExam(False)
                         return
                 EX_exam_currentQuestion += 1
@@ -783,7 +793,7 @@ class Interface:
             nonlocal EX_exam_currentQuestion
             nonlocal EX_exam_remainingQuestionTime
             EX_exam_study_tkSVar.set("")
-            EX_exam_questionVar_tkSVar.set(EX_examQuestions[EX_exam_currentQuestion][0])
+            EX_exam_questionVar_tkSVar.set(EX_examQuestions[EX_exam_currentQuestion]["question"])
             self.EX_exam_singleAnswer_tkIVar.set(None)
             for i in range(0,5):
                 EX_exam_choiceArray[i].set("")
@@ -795,9 +805,9 @@ class Interface:
                 EX_exam_question_widgetArray[i][0].grid_remove()
                 EX_exam_question_widgetArray[i][1].grid_remove()
             count = 0
-            for choice in EX_examQuestions[EX_exam_currentQuestion][5]:
+            for choice in EX_examQuestions[EX_exam_currentQuestion]["choices"]:
                 EX_exam_choiceArray[count].set(choice[1])
-                if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+                if EX_examQuestions[EX_exam_currentQuestion]["qType"] == 0:
                     if not EX_reviewFlag:
                         EX_exam_question_widgetArray[count][0].config(state="normal")
                     else:
@@ -811,8 +821,8 @@ class Interface:
                     EX_exam_question_widgetArray[count][1].grid()
                 EX_exam_question_widgetArray[count][2].config(state="normal")
                 count += 1
-            for answer in EX_examQuestions[EX_exam_currentQuestion][8]:
-                if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+            for answer in EX_examQuestions[EX_exam_currentQuestion]["selections"]:
+                if EX_examQuestions[EX_exam_currentQuestion]["qType"] == 0:
                     EX_exam_question_widgetArray[answer][0].select()
                 else:
                     EX_exam_question_widgetArray[answer][1].select()
@@ -828,9 +838,9 @@ class Interface:
                     EX_exam_buttons_finish_btn.grid_remove()
                 else:
                     EX_exam_buttons_next_btn.config(state="normal")
-            if self.examOptions[3].get() and not EX_reviewFlag:
-                if EX_examQuestions[EX_exam_currentQuestion][2] != 0:
-                    EX_exam_remainingQuestionTime = EX_examQuestions[EX_exam_currentQuestion][2] + 1
+            if self.examOptions["questionTime"].get() and not EX_reviewFlag:
+                if EX_examQuestions[EX_exam_currentQuestion]["time"] != 0:
+                    EX_exam_remainingQuestionTime = EX_examQuestions[EX_exam_currentQuestion]["time"] + 1
                 if self.EX_cycleTask[1] != None:
                     EX_window_tL.after_cancel(self.EX_cycleTask[1])
                     self.EX_cycleTask[1] = None
@@ -843,44 +853,44 @@ class Interface:
 
         # Updates a value in the EX_examQuestions array whenever an answer is selected
         def EX_selectAnswer():
-            EX_examQuestions[EX_exam_currentQuestion][8].clear()
+            EX_examQuestions[EX_exam_currentQuestion]["selections"].clear()
             EX_exam_study_tkSVar.set("")
-            if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
-                EX_examQuestions[EX_exam_currentQuestion][8].append(self.EX_exam_singleAnswer_tkIVar.get())
+            if EX_examQuestions[EX_exam_currentQuestion]["qType"] == 0:
+                EX_examQuestions[EX_exam_currentQuestion]["selections"].append(self.EX_exam_singleAnswer_tkIVar.get())
             else:
                 for i in range(0,5):
                     if EX_exam_multiAnswers[i].get():
-                        EX_examQuestions[EX_exam_currentQuestion][8].append(i)
+                        EX_examQuestions[EX_exam_currentQuestion]["selections"].append(i)
 
         # Displays whether an answer is correct or incorrect
         # Called from the "Check Answer" button, or automatically when
         # navigating the exam in review mode
         def EX_checkAnswer():
             checkArray = []
-            maxPoints = EX_examQuestions[EX_exam_currentQuestion][1]
+            maxPoints = EX_examQuestions[EX_exam_currentQuestion]["points"]
             points = 0.0
-            for answer in EX_examQuestions[EX_exam_currentQuestion][8]:
-                checkArray.append(EX_examQuestions[EX_exam_currentQuestion][5][answer][0])
+            for answer in EX_examQuestions[EX_exam_currentQuestion]["selections"]:
+                checkArray.append(EX_examQuestions[EX_exam_currentQuestion]["choices"][answer][0])
             checkArray.sort()
-            if EX_examQuestions[EX_exam_currentQuestion][4] == checkArray:
+            if EX_examQuestions[EX_exam_currentQuestion]["answers"] == checkArray:
                    EX_exam_study_tkSVar.set("Correct\n" + str(maxPoints) + " out of " + str(maxPoints) + " points")
                    EX_exam_study_lbl.config(fg="#00af00")
             else:
-                if EX_examQuestions[EX_exam_currentQuestion][3]:
+                if EX_examQuestions[EX_exam_currentQuestion]["qType"]:
                     for answer in checkArray:
-                        if answer in EX_examQuestions[EX_exam_currentQuestion][4]:
-                            points += maxPoints * (1/len(EX_examQuestions[EX_exam_currentQuestion][4]))
+                        if answer in EX_examQuestions[EX_exam_currentQuestion]["answers"]:
+                            points += maxPoints * (1/len(EX_examQuestions[EX_exam_currentQuestion]["answers"]))
                         else:
-                            points -= maxPoints * (1/len(EX_examQuestions[EX_exam_currentQuestion][4]))
+                            points -= maxPoints * (1/len(EX_examQuestions[EX_exam_currentQuestion]["answers"]))
                     if points < 0:
                         points = 0.0
                 EX_exam_study_tkSVar.set("Incorrect\n" + str(points) + " out of " + str(maxPoints) + " points")
                 EX_exam_study_lbl.config(fg="#ff0000")
-            if self.examOptions[8].get():
+            if self.examOptions["showCorrect"].get():
                 targetList = []
-                for correctAnswer in EX_examQuestions[EX_exam_currentQuestion][4]:
-                    for i in range(0, len(EX_examQuestions[EX_exam_currentQuestion][5])):
-                        if correctAnswer == EX_examQuestions[EX_exam_currentQuestion][5][i][0]:
+                for correctAnswer in EX_examQuestions[EX_exam_currentQuestion]["answers"]:
+                    for i in range(0, len(EX_examQuestions[EX_exam_currentQuestion]["choices"])):
+                        if correctAnswer == EX_examQuestions[EX_exam_currentQuestion]["choices"][i][0]:
                             targetList.append(i)
                             break
                 for location in targetList:
@@ -903,16 +913,16 @@ class Interface:
             EX_exam_buttons_previous_btn.config(state="disabled")
             EX_examQuestions = copy.deepcopy(self.questionBank)
             for question in EX_examQuestions:
-                question.append([])
-                for tag in question[6]:
+                question["selections"].clear()
+                for tag in question["tags"]:
                     if tag.lower() not in EX_tagsCheck:
                         EX_examTags.append([tag, 0, 0])
                         EX_tagsCheck.append(tag.lower())
-            if self.examOptions[0].get():
+            if self.examOptions["questionShuffle"].get():
                 random.shuffle(EX_examQuestions)
-            if self.examOptions[1].get():
+            if self.examOptions["choiceShuffle"].get():
                 for question in EX_examQuestions:
-                    random.shuffle(question[5])
+                    random.shuffle(question["choices"])
             EX_exam_buttons_next_btn.config(state="normal")
             if len(EX_examQuestions) > 1:
                 EX_exam_buttons_next_btn.grid()
@@ -921,7 +931,7 @@ class Interface:
                 EX_exam_buttons_next_btn.grid_remove()
                 EX_exam_buttons_finish_btn.grid()
             EX_startTime = int(time.time())
-            if self.examOptions[2].get():
+            if self.examOptions["examTime"].get():
                 EX_exam_remainingExamTime = (self.EO_examTime_tkIVar.get() * 60) + 1
                 EX_cycleExamCountdown()
             EX_exam_frm.grid()
@@ -965,7 +975,7 @@ class Interface:
             EX_exam_remainingExamTime -= 1
             minute = EX_exam_remainingExamTime // 60
             second = EX_exam_remainingExamTime % 60
-            if self.examOptions[4].get():
+            if self.examOptions["displayTime"].get():
                 EX_exam_remainingExamTime_tkSVar.set("Exam time remaining: " + str(minute) + ":" + format(second, "02d"))
             else:
                 EX_exam_remainingExamTime_tkSVar.set("Exam time remaining: ?")
@@ -982,7 +992,7 @@ class Interface:
             EX_exam_remainingQuestionTime -= 1
             minute = EX_exam_remainingQuestionTime // 60
             second = EX_exam_remainingQuestionTime % 60
-            if self.examOptions[4].get():
+            if self.examOptions["displayTime"].get():
                 EX_exam_remainingQuestionTime_tkSVar.set("Question time remaining: " + str(minute) + ":" + format(second, "02d"))
             else:
                 EX_exam_remainingQuestionTime_tkSVar.set("Question time remaining: ?")
@@ -999,7 +1009,7 @@ class Interface:
         def EX_bindEvent(i, event=None):
             nonlocal EX_examQuestions
             nonlocal EX_exam_question_widgetArray
-            if EX_examQuestions[EX_exam_currentQuestion][3] == 0:
+            if EX_examQuestions[EX_exam_currentQuestion]["qType"] == 0:
                 EX_exam_question_widgetArray[i][0].select()
             else:
                 EX_exam_question_widgetArray[i][1].toggle()
@@ -1130,7 +1140,7 @@ class Interface:
         EX_exam_buttons_finish_btn.grid(row=0, column=2, sticky="ew")
         EX_exam_buttons_finish_btn.grid_remove()
 
-        if self.examOptions[7].get():
+        if self.examOptions["studyMode"].get():
             EX_exam_buttons_check_btn.config(state="normal")
 
         EX_startExam()
