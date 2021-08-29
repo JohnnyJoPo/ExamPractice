@@ -1,6 +1,6 @@
 # Written by JohnnyJoPo -- https://github.com/JohnnyJoPo
 # On behalf of: N/A (personal hobby project)
-# June 30, 2021
+# August 29, 2021
 
 # gui.py is the primary module that provides all of the functionality needed for
 # the exam practice application
@@ -20,7 +20,7 @@ import copy
 import msgBank as m
 
 # Application object
-class interface:
+class Interface:
 
     # Initialization function that creates the main menu GUI
     # and global variables that can be accessed anywhere in the application
@@ -710,7 +710,7 @@ class interface:
                     points += question[1]
                     for tag in question[6]:
                         for targetTag in EX_examTags:
-                            if tag == targetTag[0]:
+                            if tag.lower() == targetTag[0].lower():
                                 targetTag[1] += question[1]
                                 targetTag[2] += question[1]
                 else:
@@ -718,15 +718,15 @@ class interface:
                     if question[3]:
                         for answer in checkArray:
                             if answer in question[4]:
-                                partialCredit += 1/len(question[4])
+                                partialCredit += question[1] * (1/len(question[4]))
                             else:
-                                partialCredit -= 1/len(question[4])
+                                partialCredit -= question[1] * (1/len(question[4]))
                         if partialCredit < 0:
                             partialCredit = 0.0
                         points += partialCredit
                     for tag in question[6]:
                         for targetTag in EX_examTags:
-                            if tag == targetTag[0]:
+                            if tag.lower() == targetTag[0].lower():
                                 targetTag[1] += partialCredit
                                 targetTag[2] += question[1]
 
@@ -869,9 +869,9 @@ class interface:
                 if EX_examQuestions[EX_exam_currentQuestion][3]:
                     for answer in checkArray:
                         if answer in EX_examQuestions[EX_exam_currentQuestion][4]:
-                            points += 1/len(EX_examQuestions[EX_exam_currentQuestion][4])
+                            points += maxPoints * (1/len(EX_examQuestions[EX_exam_currentQuestion][4]))
                         else:
-                            points -= 1/len(EX_examQuestions[EX_exam_currentQuestion][4])
+                            points -= maxPoints * (1/len(EX_examQuestions[EX_exam_currentQuestion][4]))
                     if points < 0:
                         points = 0.0
                 EX_exam_study_tkSVar.set("Incorrect\n" + str(points) + " out of " + str(maxPoints) + " points")
@@ -896,6 +896,8 @@ class interface:
             nonlocal EX_exam_currentQuestion
             nonlocal EX_startTime
             nonlocal EX_exam_remainingExamTime
+            EX_examTags = []
+            EX_tagsCheck = []
             EX_reviewFlag = False
             EX_exam_currentQuestion = 0
             EX_exam_buttons_previous_btn.config(state="disabled")
@@ -1139,4 +1141,4 @@ class interface:
 
 # Creates an interface object to start the program
 def start():
-    _ = interface()
+    _ = Interface()
